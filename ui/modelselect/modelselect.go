@@ -37,7 +37,7 @@ func New(llmClient *llm.OllamaClient) (*Model, error) {
 
 	var selectedModel string
 	ms := &Model{
-		llmClient: llmClient,
+		llmClient:     llmClient,
 		SelectedModel: selectedModel,
 	}
 	form := huh.NewForm(
@@ -71,10 +71,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	}
-	
+
 	form, cmd := m.form.Update(msg)
 	m.form = form.(*huh.Form)
-	
+
 	// Update the SelectedModel when the form is completed
 	if m.form.State == huh.StateCompleted {
 		selectedVal := m.form.Get("selectedModel")
@@ -88,7 +88,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	}
-	
+
 	return m, cmd
 }
 

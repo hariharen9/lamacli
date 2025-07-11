@@ -41,18 +41,18 @@ type errMsg struct{ error }
 
 // Model represents the state of our UI.
 type Model struct {
-	filetree        *filetree.Model
-	fileviewer      fileviewer.Model
-	modelselect     *modelselect.Model
-	chat            chat.Model
-	llmClient       *llm.OllamaClient
-	viewMode        viewMode
-	width           int
-	height          int
-	selectedModel   string
-	fileContextMode bool // True when selecting a file for chat context
-	exitConfirmation bool // True when waiting for exit confirmation
-	Err             error // Stores errors to display to the user
+	filetree         *filetree.Model
+	fileviewer       fileviewer.Model
+	modelselect      *modelselect.Model
+	chat             chat.Model
+	llmClient        *llm.OllamaClient
+	viewMode         viewMode
+	width            int
+	height           int
+	selectedModel    string
+	fileContextMode  bool  // True when selecting a file for chat context
+	exitConfirmation bool  // True when waiting for exit confirmation
+	Err              error // Stores errors to display to the user
 }
 
 // InitialModel returns an initialized Model.
@@ -204,7 +204,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = modelSelectView
 				if m.modelselect == nil {
-					return m, func() tea.Msg { return errMsg{fmt.Errorf("Ollama client not initialized. Please ensure Ollama is running.")} }
+					return m, func() tea.Msg {
+						return errMsg{fmt.Errorf("Ollama client not initialized. Please ensure Ollama is running.")}
+					}
 				}
 				if m.selectedModel != "" {
 					m.modelselect.SetSelectedModel(m.selectedModel)

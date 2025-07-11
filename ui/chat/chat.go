@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	glamour "github.com/charmbracelet/glamour"
 	"github.com/atotto/clipboard"
+	glamour "github.com/charmbracelet/glamour"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
