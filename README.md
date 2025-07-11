@@ -31,7 +31,7 @@ Ready to supercharge your terminal?
 
 ### Prerequisites
 
-Before you begin, ensure you have [Ollama](https://ollama.ai/download) installed and running on your system. You can install Ollama using one of the following methods:
+Before you begin, ensure you have [Ollama](https://ollama.com/download) installed and running on your system. You can install Ollama using one of the following methods:
 
 **macOS**
 - Download the app from [Ollama's website](https://ollama.com/download).
