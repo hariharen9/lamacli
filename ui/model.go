@@ -130,20 +130,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		// Handle global shortcuts first
-		switch msg.String() {
-		case "ctrl+c":
-			return m, tea.Quit
+		// Centralized escape handling
+		if msg.Type == tea.KeyEscape || msg.String() == "escape" {
+			if m.fileContextMode {
+				m.viewMode = chatView
+				m.fileContextMode = false
+			} else if m.viewMode != chatView {
+				m.viewMode = chatView
+			}
+			return m, nil
+		}
 
-		case "enter":
-			if m.viewMode == fileTreeView {
+		// Handle other keys based on the current view
+		switch m.viewMode {
+		case chatView:
+			// Let the chat view handle its own updates
+		case fileTreeView:
+			switch msg.String() {
+			case "enter":
 				selectedItem := m.filetree.List.SelectedItem().(filetree.Item)
 				currentPath := filepath.Join(m.filetree.List.Title, selectedItem.Path)
 				if selectedItem.IsDir {
 					m.filetree.GoTo(currentPath)
 				} else { // It's a file
 					if m.fileContextMode {
-						// We are in file selection mode for chat
 						content, err := fileops.ReadFile(currentPath)
 						if err != nil {
 							return m, func() tea.Msg { return errMsg{err} }
@@ -152,41 +162,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							return fileSelectedMsg{path: currentPath, content: content}
 						}
 					} else {
-						// Normal file viewing
 						m.fileviewer.SetContent(currentPath)
 						m.viewMode = fileViewerView
 					}
 				}
-			} else if m.viewMode == modelSelectView {
-				m.selectedModel = m.modelselect.GetSelectedModel()
-				m.viewMode = chatView // Go back to chat view after selection
-				m.chat = chat.New(m.llmClient, m.selectedModel)
-				return m, m.chat.Init()
-			}
-
-		case "backspace":
-			if m.viewMode == fileTreeView {
+			case "backspace":
 				currentPath := m.filetree.List.Title
 				parentPath := filepath.Dir(currentPath)
 				m.filetree.GoTo(parentPath)
-			} else if m.viewMode == fileViewerView {
-				m.viewMode = fileTreeView
-			}
-
-		case "escape":
-			if m.fileContextMode {
-				m.viewMode = chatView
-				m.fileContextMode = false
-			} else {
-				switch m.viewMode {
-				case fileTreeView, fileViewerView, modelSelectView, helpView:
-					m.viewMode = chatView
-				}
-			}
-			return m, nil
-
-		case "delete":
-			if m.viewMode == fileTreeView {
+			case "delete":
 				selectedItem := m.filetree.List.SelectedItem().(filetree.Item)
 				filePath := filepath.Join(m.filetree.List.Title, selectedItem.Path)
 				go func() {
@@ -195,14 +179,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.filetree.GoTo(m.filetree.List.Title)
 				}()
 			}
+		}
 
-		case "F": // 'F' for file tree view (uppercase only)
+		// Global shortcuts that are not escape
+		switch msg.String() {
+		case "ctrl+c":
+			return m, tea.Quit
+		case "F":
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = fileTreeView
 				return m, nil
 			}
-
-		case "M": // 'M' for model selection (uppercase only)
+		case "M":
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = modelSelectView
 				if m.modelselect == nil {
@@ -215,14 +203,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return tea.WindowSizeMsg{Width: m.width, Height: m.height}
 				})
 			}
-
-		case "R": // 'R' for reset/clear chat (uppercase only)
+		case "R":
 			if m.viewMode == chatView && m.chat.TextInput.Value() == "" {
 				m.chat.Reset()
 				return m, nil
 			}
-
-		case "H": // 'H' for help (uppercase only)
+		case "H":
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = helpView
 				return m, nil
