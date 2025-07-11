@@ -1,8 +1,8 @@
 # LamaCLI 🦙✨
 
-![Go Build](https://github.com/your-username/lamacli/workflows/Go%20Build/badge.svg)
+
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-![GitHub Stars](https://img.shields.io/github/stars/your-username/lamacli?style=social)
+![GitHub Stars](https://img.shields.io/github/stars/hariharen9/lamacli?style=social)
 
 ## 🚀 Unleash the Power of Local LLMs, Right in Your Terminal!
 
@@ -31,7 +31,25 @@ Ready to supercharge your terminal?
 
 ### Prerequisites
 
-Before you begin, ensure you have [Ollama](https://ollama.ai/download) installed and running on your system. You'll also need to pull at least one model (e.g., `ollama pull llama3.2:3b`).
+Before you begin, ensure you have [Ollama](https://ollama.ai/download) installed and running on your system. You can install Ollama using one of the following methods:
+
+**macOS**
+- Download the app from [Ollama's website](https://ollama.com/download).
+- Or install via Homebrew:
+    ```bash
+    brew install ollama
+    ```
+
+**Windows**
+- Download the installer from [Ollama's website](https://ollama.com/download).
+
+**Linux**
+- Run the official installation script:
+    ```bash
+    curl -fsSL https://ollama.com/install.sh | sh
+    ```
+
+After installation, make sure Ollama is running, then pull at least one model (e.g., `ollama pull llama3.2:3b`).
 
 ```bash
 ollama pull llama3.2:3b
@@ -44,8 +62,6 @@ LamaCLI is built with Go, making installation a breeze:
 ```bash
 go install github.com/hariharen9/lamacli@latest
 ```
-
-*(Replace `your-username` with your actual GitHub username if you've forked the project.)*
 
 ### Usage
 
@@ -92,10 +108,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 LamaCLI is an open-source project built with passion. If you find this tool useful and would like to support its continued development, consider buying me a coffee or contributing via PayPal! Your support helps keep this project alive and thriving.
 
-*   [☕ Buy Me a Coffee](https://www.buymeacoffee.com/yourusername)
-*   [💰 PayPal](https://paypal.me/yourusername)
+*   [☕ Buy Me a Coffee](https://www.buymeacoffee.com/hariharen)
+*   [💰 PayPal](https://paypal.me/hariharen9)
 
-*(Please replace `your-username` with your actual Buy Me a Coffee and PayPal usernames/links.)*
 
 ## 🙏 Credits
 
