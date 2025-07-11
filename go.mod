@@ -1,4 +1,4 @@
-module lamacli
+module github.com/hariharen9/lamacli
 
 go 1.24.1
 
