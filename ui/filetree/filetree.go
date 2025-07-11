@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"lamacli/ui/styles"
+	"github.com/hariharen9/lamacli/ui/styles"
 )
 
 // Item represents a file or directory in the file tree.

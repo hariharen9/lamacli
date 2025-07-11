@@ -1,11 +1,11 @@
 package fileviewer
 
 import (
-	"lamacli/fileops"
+	"github.com/hariharen9/lamacli/fileops"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
-	"lamacli/ui/styles"
+	"github.com/hariharen9/lamacli/ui/styles"
 )
 
 // Model is a bubbletea model for viewing a file.

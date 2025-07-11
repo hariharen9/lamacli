@@ -13,8 +13,8 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"lamacli/llm"
-	"lamacli/ui/styles"
+	"github.com/hariharen9/lamacli/llm"
+	"github.com/hariharen9/lamacli/ui/styles"
 )
 
 // FileContextRequestMsg is a message to request file selection for chat context.

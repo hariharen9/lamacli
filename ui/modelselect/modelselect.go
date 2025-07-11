@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"lamacli/llm"
-	"lamacli/ui/styles"
+	"github.com/hariharen9/lamacli/llm"
+	"github.com/hariharen9/lamacli/ui/styles"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"

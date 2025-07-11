@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"lamacli/ui"
+	"github.com/hariharen9/lamacli/ui"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"

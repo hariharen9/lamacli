@@ -1,7 +1,7 @@
 package styles
 
 import (
-	"lamacli/ui/theme"
+	"github.com/hariharen9/lamacli/ui/theme"
 
 	"github.com/charmbracelet/lipgloss"
 )

@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/charmbracelet/huh"
-	"lamacli/ui/styles"
+	"github.com/hariharen9/lamacli/ui/styles"
 )
 
 // ReadFile reads the content of a file at the given path.
