@@ -107,9 +107,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## ❤️ Support LamaCLI
 
 LamaCLI is an open-source project built with passion. If you find this tool useful and would like to support its continued development, consider buying me a coffee or contributing via PayPal! Your support helps keep this project alive and thriving.
-
-*   [☕ Buy Me a Coffee](https://www.buymeacoffee.com/hariharen)
-*   [💰 PayPal](https://paypal.me/hariharen9)
+<p align="center">
+    <a href="https://www.buymeacoffee.com/hariharen">
+        <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee" />
+    </a>
+    <a href="https://paypal.me/hariharen9">
+        <img src="https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal" />
+    </a>
+</p>
 
 
 ## 🙏 Credits
