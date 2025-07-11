@@ -51,6 +51,7 @@ type Model struct {
 	height          int
 	selectedModel   string
 	fileContextMode bool // True when selecting a file for chat context
+	exitConfirmation bool // True when waiting for exit confirmation
 	Err             error // Stores errors to display to the user
 }
 
@@ -132,6 +133,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		// Centralized escape handling
 		if msg.Type == tea.KeyEscape || msg.String() == "escape" {
+			if m.exitConfirmation {
+				m.exitConfirmation = false
+				return m, nil
+			}
 			if m.fileContextMode {
 				m.viewMode = chatView
 				m.fileContextMode = false
@@ -184,7 +189,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Global shortcuts that are not escape
 		switch msg.String() {
 		case "ctrl+c":
-			return m, tea.Quit
+			if m.exitConfirmation {
+				return m, tea.Quit
+			} else {
+				m.exitConfirmation = true
+				return m, nil
+			}
 		case "F":
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = fileTreeView
@@ -212,6 +222,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = helpView
 				return m, nil
+			}
+		default:
+			// Any other key press cancels the exit confirmation
+			if m.exitConfirmation {
+				m.exitConfirmation = false
 			}
 		}
 	}
@@ -470,6 +485,14 @@ func (m Model) View() string {
 	// Main content with better spacing
 	mainContent := styles.AppStyle.Render(s)
 	helpBar := m.helpView()
+
+	if m.exitConfirmation {
+		exitMessage := lipgloss.NewStyle().
+			Foreground(styles.ErrorStyle.GetForeground()).
+			Bold(true).
+			Render("Are you sure you want to exit? Press Ctrl+C again to confirm.")
+		helpBar = lipgloss.JoinVertical(lipgloss.Left, helpBar, exitMessage)
+	}
 
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
