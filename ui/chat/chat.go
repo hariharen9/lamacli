@@ -17,6 +17,9 @@ import (
 	"lamacli/ui/styles"
 )
 
+// FileContextRequestMsg is a message to request file selection for chat context.
+type FileContextRequestMsg struct{}
+
 // llmResponseChunkMsg is a message that contains a chunk of the LLM's response.
 type llmResponseChunkMsg string
 
@@ -31,21 +34,22 @@ func (e errMsg) Error() string {
 }
 
 type Model struct {
-	viewport      viewport.Model
-	TextInput     textinput.Model
-	llmClient     *llm.OllamaClient
-	SelectedModel string
-	History       []string
-	streaming     bool
-	ready         bool
-	responseChan  chan string
-	err           error
-	width         int
-	height        int
-	renderer      *glamour.TermRenderer
-	codeBlocks    []string // Store extracted code blocks
-	selectedCode  int      // Currently selected code block for copying
-	showCodeHelp  bool     // Show code copy help
+	viewport        viewport.Model
+	TextInput       textinput.Model
+	llmClient       *llm.OllamaClient
+	SelectedModel   string
+	History         []string
+	streaming       bool
+	ready           bool
+	responseChan    chan string
+	err             error
+	width           int
+	height          int
+	renderer        *glamour.TermRenderer
+	codeBlocks      []string // Store extracted code blocks
+	selectedCode    int      // Currently selected code block for copying
+	showCodeHelp    bool     // Show code copy help
+	ContextFileName string   // Name of the file added to context
 }
 
 // New creates a new chat model.
@@ -85,7 +89,7 @@ func New(llmClient *llm.OllamaClient, selectedModel string) Model {
 func extractCodeBlocks(text string) []string {
 	codeBlockRegex := regexp.MustCompile("```(?:[a-zA-Z0-9_+-]*\\n)?([\\s\\S]*?)```")
 	matches := codeBlockRegex.FindAllStringSubmatch(text, -1)
-	
+
 	var codeBlocks []string
 	for _, match := range matches {
 		if len(match) > 1 {
@@ -155,7 +159,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-		
+
 		// Handle enter key for code copying
 		if keyMsg.Type == tea.KeyEnter {
 			if m.showCodeHelp && len(m.codeBlocks) > 0 && m.TextInput.Value() == "" {
@@ -182,7 +186,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.Width = msg.Width - styles.ChatBoxStyle.GetHorizontalFrameSize()
 		m.viewport.Height = msg.Height - lipgloss.Height(m.TextInput.View()) - styles.ChatBoxStyle.GetVerticalFrameSize() - 2
 		m.TextInput.Width = msg.Width - 8 // Adjust for padding and borders
-		
+
 		// Update renderer width
 		if m.renderer != nil {
 			m.renderer, _ = glamour.NewTermRenderer(
@@ -190,7 +194,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				glamour.WithWordWrap(m.viewport.Width-4),
 			)
 		}
-		
+
 		if !m.ready {
 			m.ready = true
 		}
@@ -230,6 +234,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.History = append(m.History, question)
 			m.History = append(m.History, "") // Placeholder for LLM response
 			m.TextInput.SetValue("")
+			m.ContextFileName = "" // Clear the context file name
 			m.renderViewport()
 			m.viewport.GotoBottom()
 
@@ -245,6 +250,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			f.WriteString(fmt.Sprintf("DEBUG: Calling GenerateResponseStream with model: %s\n", m.SelectedModel))
 			go m.llmClient.GenerateResponseStream(m.SelectedModel, "You are a helpful assistant.", m.History[:len(m.History)-1], m.responseChan)
 			return m, readStreamCmd(m.responseChan)
+
+		case tea.KeyRunes:
+			// Check for "@" to trigger file context selection
+			if string(msg.Runes) == "@" {
+				return m, func() tea.Msg {
+					return FileContextRequestMsg{}
+				}
+			}
 		}
 	}
 
@@ -267,10 +280,10 @@ func readStreamCmd(ch <-chan string) tea.Cmd {
 
 func (m *Model) renderViewport() {
 	var content strings.Builder
-	
+
 	// Clear existing code blocks
 	m.codeBlocks = []string{}
-	
+
 	for i, line := range m.History {
 		var styledLine string
 		if i%2 == 0 {
@@ -286,7 +299,7 @@ func (m *Model) renderViewport() {
 				// Extract code blocks before rendering
 				codeBlocks := extractCodeBlocks(line)
 				m.codeBlocks = append(m.codeBlocks, codeBlocks...)
-				
+
 				// Render markdown
 				if m.renderer != nil {
 					rendered, err := m.renderer.Render(line)
@@ -306,12 +319,12 @@ func (m *Model) renderViewport() {
 			content.WriteString("\n\n") // Add extra spacing between messages
 		}
 	}
-	
+
 	// Reset selected code block if we have fewer blocks now
 	if m.selectedCode >= len(m.codeBlocks) {
 		m.selectedCode = 0
 	}
-	
+
 	m.viewport.SetContent(content.String())
 }
 
@@ -382,7 +395,7 @@ func (m Model) View() string {
 			Render("❌ Error: " + m.err.Error())
 		return lipgloss.JoinVertical(lipgloss.Left, view.String(), errorFooter)
 	}
-	
+
 	// Show code block help if active
 	if m.showCodeHelp && len(m.codeBlocks) > 0 {
 		codeHelpStyle := lipgloss.NewStyle().
@@ -392,12 +405,12 @@ func (m Model) View() string {
 			Padding(1, 2).
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(styles.TitleStyle.GetForeground())
-		
+
 		codeHelpText := fmt.Sprintf(
 			"📎 Code Blocks (%d/%d)\n↑/↓ or j/k: Navigate • Enter: Copy • C: Close",
 			m.selectedCode+1, len(m.codeBlocks),
 		)
-		
+
 		// Show preview of selected code block
 		if m.selectedCode < len(m.codeBlocks) {
 			preview := m.codeBlocks[m.selectedCode]
@@ -406,18 +419,25 @@ func (m Model) View() string {
 			}
 			codeHelpText += "\n\n" + styles.SubtleStyle.Render("Preview: ") + preview
 		}
-		
+
 		codeHelp := codeHelpStyle.Render(codeHelpText)
 		return lipgloss.JoinVertical(lipgloss.Left, view.String(), codeHelp)
 	}
-	
+
 	// Show code block indicator if blocks are available
 	if len(m.codeBlocks) > 0 && !m.showCodeHelp {
 		codeIndicator := lipgloss.NewStyle().
 			Foreground(styles.SubtleStyle.GetForeground()).
-			MarginTop(1).
-			Render(fmt.Sprintf("📎 %d code block(s) available • Press C to copy", len(m.codeBlocks)))
+			MarginTop(1).Render(fmt.Sprintf("📎 %d code block(s) available • Press C to copy", len(m.codeBlocks)))
 		return lipgloss.JoinVertical(lipgloss.Left, view.String(), codeIndicator)
+	}
+
+	// Show attached file indicator
+	if m.ContextFileName != "" {
+		fileIndicator := lipgloss.NewStyle().
+			Foreground(styles.SubtleStyle.GetForeground()).
+			MarginTop(1).Render(fmt.Sprintf("📄 Attached: %s", m.ContextFileName))
+		return lipgloss.JoinVertical(lipgloss.Left, view.String(), fileIndicator)
 	}
 
 	return view.String()

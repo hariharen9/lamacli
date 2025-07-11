@@ -22,6 +22,12 @@ import (
 // viewMode is used to determine which view to render.
 type viewMode int
 
+// fileSelectedMsg is a message to indicate a file has been selected for context.
+type fileSelectedMsg struct {
+	path    string
+	content []byte
+}
+
 const (
 	chatView viewMode = iota // Chat is now the default view
 	fileTreeView
@@ -35,16 +41,17 @@ type errMsg struct{ error }
 
 // Model represents the state of our UI.
 type Model struct {
-	filetree      *filetree.Model
-	fileviewer    fileviewer.Model
-	modelselect   *modelselect.Model
-	chat          chat.Model
-	llmClient     *llm.OllamaClient
-	viewMode      viewMode
-	width         int
-	height        int
-	selectedModel string
-	Err           error // Stores errors to display to the user
+	filetree        *filetree.Model
+	fileviewer      fileviewer.Model
+	modelselect     *modelselect.Model
+	chat            chat.Model
+	llmClient       *llm.OllamaClient
+	viewMode        viewMode
+	width           int
+	height          int
+	selectedModel   string
+	fileContextMode bool // True when selecting a file for chat context
+	Err             error // Stores errors to display to the user
 }
 
 // InitialModel returns an initialized Model.
@@ -71,7 +78,7 @@ func InitialModel() Model {
 		if err == nil && len(models) > 0 {
 			defaultModel = models[0] // Set first available model as default
 		} else if initialErr == nil {
-			initialErr = fmt.Errorf("No Ollama models found. Please pull a model (e.g., 'ollama pull llama2').")
+			initialErr = fmt.Errorf("No Ollama models found. Please pull a model (e.g., 'ollama pull llama2')")
 		}
 	}
 
@@ -103,7 +110,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.fileviewer.Viewport.Width = msg.Width - styles.AppStyle.GetHorizontalFrameSize()
 		m.fileviewer.Viewport.Height = msg.Height - styles.AppStyle.GetVerticalFrameSize() - lipgloss.Height(m.helpView())
 
-	
+	case chat.FileContextRequestMsg:
+		m.viewMode = fileTreeView
+		m.fileContextMode = true
+		return m, nil
+
+	case fileSelectedMsg:
+		// Add file content to chat input, replacing the @
+		currentInput := m.chat.TextInput.Value()
+		newInput := strings.TrimSuffix(currentInput, "@") + fmt.Sprintf("\n--- Start of File: %s ---\n%s\n--- End of File ---\n", filepath.Base(msg.path), string(msg.content))
+		m.chat.TextInput.SetValue(newInput)
+		m.chat.ContextFileName = filepath.Base(msg.path)
+		m.viewMode = chatView
+		m.fileContextMode = false
+		return m, nil
 
 	case errMsg:
 		m.Err = msg
@@ -114,7 +134,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
-		// Remove q key exit - only ctrl+c should exit
 
 		case "enter":
 			if m.viewMode == fileTreeView {
@@ -122,16 +141,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				currentPath := filepath.Join(m.filetree.List.Title, selectedItem.Path)
 				if selectedItem.IsDir {
 					m.filetree.GoTo(currentPath)
-				} else {
-					m.fileviewer.SetContent(currentPath)
-					m.viewMode = fileViewerView
+				} else { // It's a file
+					if m.fileContextMode {
+						// We are in file selection mode for chat
+						content, err := fileops.ReadFile(currentPath)
+						if err != nil {
+							return m, func() tea.Msg { return errMsg{err} }
+						}
+						return m, func() tea.Msg {
+							return fileSelectedMsg{path: currentPath, content: content}
+						}
+					} else {
+						// Normal file viewing
+						m.fileviewer.SetContent(currentPath)
+						m.viewMode = fileViewerView
+					}
 				}
 			} else if m.viewMode == modelSelectView {
-				// Handle model selection - this should not happen since we handle it in the update section
-				// Keep this for safety but the main logic is in the modelSelectView update
 				m.selectedModel = m.modelselect.GetSelectedModel()
 				m.viewMode = chatView // Go back to chat view after selection
-				// Create new chat with the new model to ensure default appearance
 				m.chat = chat.New(m.llmClient, m.selectedModel)
 				return m, m.chat.Init()
 			}
@@ -144,23 +172,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.viewMode == fileViewerView {
 				m.viewMode = fileTreeView
 			}
-			
+
 		case "escape":
-			// Escape should only navigate between views, not exit the program
-			if m.viewMode == fileTreeView {
-				m.viewMode = chatView // Go back to chat view
-				return m, nil
-			} else if m.viewMode == fileViewerView {
-				m.viewMode = chatView // Go back to chat view
-				return m, nil
-			} else if m.viewMode == modelSelectView {
-				m.viewMode = chatView // Go back to chat view
-				return m, nil
-			} else if m.viewMode == helpView {
-				m.viewMode = chatView // Go back to chat view
-				return m, nil
+			if m.fileContextMode {
+				m.viewMode = chatView
+				m.fileContextMode = false
+			} else {
+				switch m.viewMode {
+				case fileTreeView, fileViewerView, modelSelectView, helpView:
+					m.viewMode = chatView
+				}
 			}
-			// In chat view, escape does nothing (we don't want to exit)
+			return m, nil
 
 		case "delete":
 			if m.viewMode == fileTreeView {
@@ -174,40 +197,32 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "F": // 'F' for file tree view (uppercase only)
-			// Only allow if not typing in chat
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = fileTreeView
 				return m, nil
 			}
 
 		case "M": // 'M' for model selection (uppercase only)
-			// Only allow if not typing in chat
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = modelSelectView
-				// If there was an error initializing modelselect, we should display it.
 				if m.modelselect == nil {
 					return m, func() tea.Msg { return errMsg{fmt.Errorf("Ollama client not initialized. Please ensure Ollama is running.")} }
 				}
-				// Set the current model as the default selection
 				if m.selectedModel != "" {
 					m.modelselect.SetSelectedModel(m.selectedModel)
 				}
-			// Resize viewport after model selection
-			return m, tea.Batch(m.modelselect.Init(), func() tea.Msg {
-				return tea.WindowSizeMsg{Width: m.width, Height: m.height}
-			})
+				return m, tea.Batch(m.modelselect.Init(), func() tea.Msg {
+					return tea.WindowSizeMsg{Width: m.width, Height: m.height}
+				})
 			}
-			
+
 		case "R": // 'R' for reset/clear chat (uppercase only)
-			// Only allow if not typing in chat
 			if m.viewMode == chatView && m.chat.TextInput.Value() == "" {
-				// Clear chat history while preserving UI state
 				m.chat.Reset()
 				return m, nil
 			}
-			
+
 		case "H": // 'H' for help (uppercase only)
-			// Only allow if not typing in chat
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = helpView
 				return m, nil
@@ -222,7 +237,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case fileViewerView:
 		m.fileviewer.Viewport, cmd = m.fileviewer.Viewport.Update(msg)
 	case modelSelectView:
-		// Only update modelselect if it's not nil (i.e., no init error)
 		if m.modelselect != nil {
 			updatedModel, updateCmd := m.modelselect.Update(msg)
 			if ms, ok := updatedModel.(*modelselect.Model); ok {
@@ -233,7 +247,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					log.SetOutput(f)
 					log.Printf("DEBUG: Model selection completed, selected model: %s", m.selectedModel)
 					f.Close()
-					// Create new chat with the new model to ensure default appearance
 					m.chat = chat.New(m.llmClient, m.selectedModel)
 					m.viewMode = chatView
 					return m, m.chat.Init()
@@ -246,7 +259,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chat = updatedChat.(chat.Model)
 		cmd = newCmd
 	case helpView:
-		// Help view doesn't need to update, it's static
 		cmd = nil
 	}
 
@@ -257,7 +269,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) helpView() string {
 	var helpItems []string
 	var title string
-	
+
 	switch m.viewMode {
 	case chatView:
 		title = "💬 Chat"
@@ -304,32 +316,32 @@ func (m Model) helpView() string {
 			"ctrl+c: exit",
 		}
 	}
-	
+
 	// Create a more appealing help bar
 	titleStyle := lipgloss.NewStyle().
 		Foreground(styles.TitleStyle.GetForeground()).
 		Bold(true).
 		PaddingRight(2)
-	
+
 	helpStyle := lipgloss.NewStyle().
 		Foreground(styles.SubtleStyle.GetForeground()).
 		PaddingLeft(1).
 		PaddingRight(1)
-	
+
 	separatorStyle := lipgloss.NewStyle().
 		Foreground(styles.SubtleStyle.GetForeground()).
 		SetString(" • ")
-	
+
 	var helpBar []string
 	helpBar = append(helpBar, titleStyle.Render(title))
-	
+
 	for i, item := range helpItems {
 		if i > 0 {
 			helpBar = append(helpBar, separatorStyle.Render())
 		}
 		helpBar = append(helpBar, helpStyle.Render(item))
 	}
-	
+
 	return lipgloss.JoinHorizontal(lipgloss.Left, helpBar...)
 }
 
@@ -355,7 +367,7 @@ func (m Model) renderHelpContent() string {
 		Bold(true)
 
 	var content strings.Builder
-	
+
 	// Main title
 	content.WriteString(titleStyle.Render("🦙 LamaCLI - Complete User Guide"))
 	content.WriteString("\n\n")
@@ -479,4 +491,3 @@ func (m Model) View() string {
 		helpBar,
 	)
 }
-
