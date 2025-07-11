@@ -62,6 +62,16 @@ func (m Model) Init() tea.Cmd {
 
 // Update handles messages and updates the model accordingly.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Check for escape key before passing to form
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		if keyMsg.String() == "escape" {
+			// Return a special message to signal escape
+			return m, func() tea.Msg {
+				return tea.KeyMsg{Type: tea.KeyEscape}
+			}
+		}
+	}
+	
 	form, cmd := m.form.Update(msg)
 	m.form = form.(*huh.Form)
 	

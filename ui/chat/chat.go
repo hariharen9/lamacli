@@ -66,7 +66,7 @@ func New(llmClient *llm.OllamaClient, selectedModel string) Model {
 	)
 
 	// Add welcome message to history
-	welcomeMessage := "Welcome to LamaCLI! 🦙✨\n\nI'm ready to help you with your questions. You can:\n• Ask me anything about programming, writing, or general topics\n• Use 'F' to browse files and 'M' to switch AI models\n• Use 'C' to copy code blocks when available\n• Press Ctrl+C to exit\n\nWhat would you like to know?"
+	welcomeMessage := "Welcome to LamaCLI! 🦙✨\n\nI'm ready to help you with your questions. You can:\n• Ask me anything about programming, writing, or general topics\n• Use 'F' to browse files and 'M' to switch AI models\n• Use 'C' to copy code blocks when available\n• Press 'H' for detailed help and instructions\n• Press Ctrl+C to exit\n\nWhat would you like to know?"
 
 	return Model{
 		viewport:      vp,
@@ -103,6 +103,25 @@ func (m *Model) copySelectedCodeBlock() error {
 	return clipboard.WriteAll(m.codeBlocks[m.selectedCode])
 }
 
+// SetModel updates the selected model without recreating the entire chat
+func (m *Model) SetModel(selectedModel string) {
+	m.SelectedModel = selectedModel
+	// Keep existing history and UI state
+}
+
+// Reset clears the chat history while preserving the model and UI state
+func (m *Model) Reset() {
+	// Clear history but keep welcome message
+	welcomeMessage := "Welcome to LamaCLI! 🦙✨\n\nI'm ready to help you with your questions. You can:\n• Ask me anything about programming, writing, or general topics\n• Use 'F' to browse files and 'M' to switch AI models\n• Use 'C' to copy code blocks when available\n• Press 'H' for detailed help and instructions\n• Press Ctrl+C to exit\n\nWhat would you like to know?"
+	m.History = []string{"", welcomeMessage}
+	m.codeBlocks = []string{}
+	m.selectedCode = 0
+	m.showCodeHelp = false
+	m.streaming = false
+	m.err = nil
+	m.renderViewport()
+}
+
 // Init is a command that can be run when the program starts.
 func (m Model) Init() tea.Cmd {
 	return textinput.Blink
@@ -115,7 +134,41 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds []tea.Cmd
 	)
 
-	// Always update TextInput and viewport
+	// Handle special keys BEFORE text input updates
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		if m.TextInput.Value() == "" {
+			switch keyMsg.String() {
+			case "C":
+				if len(m.codeBlocks) > 0 {
+					m.showCodeHelp = !m.showCodeHelp
+					return m, nil
+				}
+			case "j", "down":
+				if m.showCodeHelp && len(m.codeBlocks) > 0 {
+					m.selectedCode = (m.selectedCode + 1) % len(m.codeBlocks)
+					return m, nil
+				}
+			case "k", "up":
+				if m.showCodeHelp && len(m.codeBlocks) > 0 {
+					m.selectedCode = (m.selectedCode - 1 + len(m.codeBlocks)) % len(m.codeBlocks)
+					return m, nil
+				}
+			}
+		}
+		
+		// Handle enter key for code copying
+		if keyMsg.Type == tea.KeyEnter {
+			if m.showCodeHelp && len(m.codeBlocks) > 0 && m.TextInput.Value() == "" {
+				err := m.copySelectedCodeBlock()
+				if err == nil {
+					m.showCodeHelp = false
+				}
+				return m, nil
+			}
+		}
+	}
+
+	// Update TextInput and viewport after special key handling
 	m.TextInput, cmd = m.TextInput.Update(msg)
 	cmds = append(cmds, cmd)
 
@@ -128,7 +181,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.viewport.Width = msg.Width - styles.ChatBoxStyle.GetHorizontalFrameSize()
 		m.viewport.Height = msg.Height - lipgloss.Height(m.TextInput.View()) - styles.ChatBoxStyle.GetVerticalFrameSize() - 2
-		m.TextInput.Width = msg.Width - 4 // Adjust for padding
+		m.TextInput.Width = msg.Width - 8 // Adjust for padding and borders
+		
+		// Update renderer width
+		if m.renderer != nil {
+			m.renderer, _ = glamour.NewTermRenderer(
+				glamour.WithAutoStyle(),
+				glamour.WithWordWrap(m.viewport.Width-4),
+			)
+		}
+		
 		if !m.ready {
 			m.ready = true
 		}
@@ -154,6 +216,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.responseChan = nil
 
 	case tea.KeyMsg:
+		// Handle message sending
 		switch msg.Type {
 		case tea.KeyEnter:
 			if m.streaming {
@@ -182,37 +245,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			f.WriteString(fmt.Sprintf("DEBUG: Calling GenerateResponseStream with model: %s\n", m.SelectedModel))
 			go m.llmClient.GenerateResponseStream(m.SelectedModel, "You are a helpful assistant.", m.History[:len(m.History)-1], m.responseChan)
 			return m, readStreamCmd(m.responseChan)
-			// Remove the KeyBackspace case - let it be handled by the TextInput
-		}
-		
-		// Handle code block navigation and copying when not typing
-		if m.TextInput.Value() == "" {
-			switch msg.String() {
-			case "c", "C":
-				if len(m.codeBlocks) > 0 {
-					m.showCodeHelp = !m.showCodeHelp
-					return m, nil
-				}
-			case "j", "down":
-				if m.showCodeHelp && len(m.codeBlocks) > 0 {
-					m.selectedCode = (m.selectedCode + 1) % len(m.codeBlocks)
-					return m, nil
-				}
-			case "k", "up":
-				if m.showCodeHelp && len(m.codeBlocks) > 0 {
-					m.selectedCode = (m.selectedCode - 1 + len(m.codeBlocks)) % len(m.codeBlocks)
-					return m, nil
-				}
-			case "enter":
-				if m.showCodeHelp && len(m.codeBlocks) > 0 {
-					err := m.copySelectedCodeBlock()
-					if err == nil {
-						m.showCodeHelp = false
-						// You could add a success message here
-					}
-					return m, nil
-				}
-			}
 		}
 	}
 
@@ -308,10 +340,9 @@ func (m Model) View() string {
 			Foreground(styles.TitleStyle.GetForeground()).
 			Bold(true).
 			Render(headerContent),
-	)
+	) + "\n"
 
 	view.WriteString(header)
-	view.WriteString("\n")
 
 	// Enhanced chat box with better styling
 	chatBoxHeight := m.height - lipgloss.Height(m.TextInput.View()) - lipgloss.Height(header) - 3

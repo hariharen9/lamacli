@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"lamacli/fileops"
 	"lamacli/llm"
@@ -26,6 +27,7 @@ const (
 	fileTreeView
 	fileViewerView
 	modelSelectView
+	helpView
 )
 
 // Msg for when an error occurs
@@ -112,11 +114,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
-		case "q":
-			// Only quit if not in chat view or if chat input is empty
-			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
-				return m, tea.Quit
-			}
+		// Remove q key exit - only ctrl+c should exit
 
 		case "enter":
 			if m.viewMode == fileTreeView {
@@ -129,12 +127,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.viewMode = fileViewerView
 				}
 			} else if m.viewMode == modelSelectView {
-				// Handle model selection
+				// Handle model selection - this should not happen since we handle it in the update section
+				// Keep this for safety but the main logic is in the modelSelectView update
 				m.selectedModel = m.modelselect.GetSelectedModel()
 				m.viewMode = chatView // Go back to chat view after selection
-				// Re-initialize chat with the new model
+				// Create new chat with the new model to ensure default appearance
 				m.chat = chat.New(m.llmClient, m.selectedModel)
-				return m, nil
+				return m, m.chat.Init()
 			}
 
 		case "backspace":
@@ -157,6 +156,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if m.viewMode == modelSelectView {
 				m.viewMode = chatView // Go back to chat view
 				return m, nil
+			} else if m.viewMode == helpView {
+				m.viewMode = chatView // Go back to chat view
+				return m, nil
 			}
 			// In chat view, escape does nothing (we don't want to exit)
 
@@ -171,14 +173,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}()
 			}
 
-		case "f", "F": // 'F' for file tree view
+		case "F": // 'F' for file tree view (uppercase only)
 			// Only allow if not typing in chat
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = fileTreeView
 				return m, nil
 			}
 
-		case "m", "M": // 'M' for model selection
+		case "M": // 'M' for model selection (uppercase only)
 			// Only allow if not typing in chat
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = modelSelectView
@@ -190,15 +192,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.selectedModel != "" {
 					m.modelselect.SetSelectedModel(m.selectedModel)
 				}
-				return m, m.modelselect.Init()
+			// Resize viewport after model selection
+			return m, tea.Batch(m.modelselect.Init(), func() tea.Msg {
+				return tea.WindowSizeMsg{Width: m.width, Height: m.height}
+			})
 			}
 			
-		case "r", "R": // 'R' for reset/clear chat
+		case "R": // 'R' for reset/clear chat (uppercase only)
 			// Only allow if not typing in chat
 			if m.viewMode == chatView && m.chat.TextInput.Value() == "" {
-				// Clear chat history and reinitialize
-				m.chat = chat.New(m.llmClient, m.selectedModel)
-				return m, m.chat.Init()
+				// Clear chat history while preserving UI state
+				m.chat.Reset()
+				return m, nil
+			}
+			
+		case "H": // 'H' for help (uppercase only)
+			// Only allow if not typing in chat
+			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
+				m.viewMode = helpView
+				return m, nil
 			}
 		}
 	}
@@ -215,16 +227,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			updatedModel, updateCmd := m.modelselect.Update(msg)
 			if ms, ok := updatedModel.(*modelselect.Model); ok {
 				m.modelselect = ms
-			if m.modelselect.FormCompleted() {
-				m.selectedModel = m.modelselect.GetSelectedModel()
-				f, _ := os.OpenFile("debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-				log.SetOutput(f)
-				log.Printf("DEBUG: Model selection completed, selected model: %s", m.selectedModel)
-				f.Close()
-				m.chat = chat.New(m.llmClient, m.selectedModel) // Re-initialize chat with the new model
-				m.viewMode = fileTreeView
-				return m, nil
-			}
+				if m.modelselect.FormCompleted() {
+					m.selectedModel = m.modelselect.GetSelectedModel()
+					f, _ := os.OpenFile("debug.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+					log.SetOutput(f)
+					log.Printf("DEBUG: Model selection completed, selected model: %s", m.selectedModel)
+					f.Close()
+					// Create new chat with the new model to ensure default appearance
+					m.chat = chat.New(m.llmClient, m.selectedModel)
+					m.viewMode = chatView
+					return m, m.chat.Init()
+				}
 			}
 			cmd = updateCmd
 		}
@@ -232,6 +245,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		updatedChat, newCmd := m.chat.Update(msg)
 		m.chat = updatedChat.(chat.Model)
 		cmd = newCmd
+	case helpView:
+		// Help view doesn't need to update, it's static
+		cmd = nil
 	}
 
 	return m, cmd
@@ -252,6 +268,7 @@ func (m Model) helpView() string {
 			"M: switch model",
 			"R: reset chat",
 			"C: copy code blocks",
+			"H: help",
 			"ctrl+c: exit",
 		}
 	case fileTreeView:
@@ -277,6 +294,12 @@ func (m Model) helpView() string {
 		helpItems = []string{
 			"↑/↓: navigate models",
 			"enter: select model",
+			"esc: back to chat",
+			"ctrl+c: exit",
+		}
+	case helpView:
+		title = "🆘 Help"
+		helpItems = []string{
 			"esc: back to chat",
 			"ctrl+c: exit",
 		}
@@ -310,6 +333,111 @@ func (m Model) helpView() string {
 	return lipgloss.JoinHorizontal(lipgloss.Left, helpBar...)
 }
 
+// renderHelpContent returns the detailed help content
+func (m Model) renderHelpContent() string {
+	titleStyle := lipgloss.NewStyle().
+		Foreground(styles.TitleStyle.GetForeground()).
+		Bold(true).
+		Align(lipgloss.Center).
+		Padding(1, 2)
+
+	headerStyle := lipgloss.NewStyle().
+		Foreground(styles.TitleStyle.GetForeground()).
+		Bold(true).
+		PaddingTop(1)
+
+	itemStyle := lipgloss.NewStyle().
+		Foreground(styles.SubtleStyle.GetForeground()).
+		PaddingLeft(2)
+
+	keyStyle := lipgloss.NewStyle().
+		Foreground(styles.StatusStyle.GetForeground()).
+		Bold(true)
+
+	var content strings.Builder
+	
+	// Main title
+	content.WriteString(titleStyle.Render("🦙 LamaCLI - Complete User Guide"))
+	content.WriteString("\n\n")
+
+	// Chat Commands
+	content.WriteString(headerStyle.Render("💬 Chat Commands"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• Type your message and press " + keyStyle.Render("Enter") + " to send"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• Use " + keyStyle.Render("↑/↓") + " to scroll through chat history"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• Chat supports full markdown rendering with syntax highlighting"))
+	content.WriteString("\n\n")
+
+	// Navigation Commands
+	content.WriteString(headerStyle.Render("🧭 Navigation Commands"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("F") + " - Open file explorer to browse project files"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("M") + " - Switch between different AI models"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("R") + " - Reset chat history (clears conversation)"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("H") + " - Show this help screen"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("Esc") + " - Return to chat from any view"))
+	content.WriteString("\n\n")
+
+	// Code Block Features
+	content.WriteString(headerStyle.Render("📎 Code Block Features"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("C") + " - Open code block copy mode when code is available"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("↑/↓") + " or " + keyStyle.Render("j/k") + " - Navigate between code blocks"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("Enter") + " - Copy selected code block to clipboard"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• Code blocks are automatically extracted from AI responses"))
+	content.WriteString("\n\n")
+
+	// File Explorer
+	content.WriteString(headerStyle.Render("📁 File Explorer"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("↑/↓") + " - Navigate through files and folders"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("Enter") + " - Open file for viewing or enter directory"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("Backspace") + " - Go to parent directory"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("Del") + " - Delete selected file (with confirmation)"))
+	content.WriteString("\n\n")
+
+	// Tips and Tricks
+	content.WriteString(headerStyle.Render("💡 Tips and Tricks"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• All command keys (F, M, R, C, H) are uppercase only"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• Lowercase letters are used for typing messages normally"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• The AI supports markdown, so you can ask for formatted responses"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• You can ask the AI to generate code in any programming language"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• Use the file explorer to understand project structure"))
+	content.WriteString("\n\n")
+
+	// Exit
+	content.WriteString(headerStyle.Render("🚪 Exit"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("Ctrl+C") + " - Exit the application (only way to quit)"))
+	content.WriteString("\n\n")
+
+	// Footer
+	footerStyle := lipgloss.NewStyle().
+		Foreground(styles.SubtleStyle.GetForeground()).
+		Align(lipgloss.Center).
+		Padding(1, 2)
+	content.WriteString(footerStyle.Render("Press Esc to return to chat"))
+
+	return content.String()
+}
+
 // View returns the string representation of the UI.
 func (m Model) View() string {
 	var s string
@@ -322,6 +450,8 @@ func (m Model) View() string {
 		s = m.modelselect.View()
 	case chatView:
 		s = m.chat.View()
+	case helpView:
+		s = m.renderHelpContent()
 	}
 
 	// Display error message if any
