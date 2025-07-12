@@ -116,7 +116,7 @@ _Coming soon: Video demonstration of quick CLI commands_
 
 While the interactive mode is the main feature, LamaCLI also supports quick CLI commands for rapid queries:
 
-### Ask Questions
+### Examples in CLI Mode:
 ```bash
 # Basic question
 lamacli ask "How do I list files in Linux?"
