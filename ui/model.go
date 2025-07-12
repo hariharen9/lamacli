@@ -388,7 +388,7 @@ func (m Model) helpView() string {
 		}
 	}
 
-	// Create a more appealing help bar
+	// Create a responsive help bar that wraps when needed
 	titleStyle := lipgloss.NewStyle().
 		Foreground(styles.TitleStyle.GetForeground()).
 		Bold(true).
@@ -403,17 +403,45 @@ func (m Model) helpView() string {
 		Foreground(styles.SubtleStyle.GetForeground()).
 		SetString(" • ")
 
-	var helpBar []string
-	helpBar = append(helpBar, titleStyle.Render(title))
-
-	for i, item := range helpItems {
-		if i > 0 {
-			helpBar = append(helpBar, separatorStyle.Render())
-		}
-		helpBar = append(helpBar, helpStyle.Render(item))
+	// Calculate available width (assuming some padding)
+	availableWidth := m.width - 4
+	if availableWidth <= 0 {
+		availableWidth = 80 // fallback
 	}
 
-	return lipgloss.JoinHorizontal(lipgloss.Left, helpBar...)
+	// Build help content with title
+	titleRendered := titleStyle.Render(title)
+	currentLine := titleRendered
+	currentWidth := lipgloss.Width(titleRendered)
+	var lines []string
+
+	for i, item := range helpItems {
+		separator := ""
+		if i > 0 || currentWidth > 0 {
+			separator = separatorStyle.Render()
+		}
+		helpItem := helpStyle.Render(item)
+		newItemWidth := lipgloss.Width(separator) + lipgloss.Width(helpItem)
+
+		// Check if adding this item would exceed available width
+		if currentWidth+newItemWidth > availableWidth && currentWidth > 0 {
+			// Start a new line
+			lines = append(lines, currentLine)
+			currentLine = helpItem
+			currentWidth = lipgloss.Width(helpItem)
+		} else {
+			// Add to current line
+			currentLine += separator + helpItem
+			currentWidth += newItemWidth
+		}
+	}
+
+	// Add the last line
+	if currentLine != "" {
+		lines = append(lines, currentLine)
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }
 
 // renderHelpContent returns the detailed help content
