@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/hariharen9/lamacli/chathistory"
 	"github.com/hariharen9/lamacli/llm"
 	"github.com/hariharen9/lamacli/ui/styles"
 )
@@ -50,6 +51,7 @@ type Model struct {
 	selectedCode    int      // Currently selected code block for copying
 	showCodeHelp    bool     // Show code copy help
 	ContextFileName string   // Name of the file added to context
+	currentSession  *chathistory.ChatSession // Current chat session for auto-saving
 }
 
 // New creates a new chat model.
@@ -213,6 +215,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.responseChan = nil
 		m.renderViewport()
 		m.viewport.GotoBottom()
+		// Auto-save session after response completion
+		m.AutoSaveSession()
 
 	case errMsg:
 		m.err = msg.err
@@ -332,28 +336,40 @@ func (m *Model) renderViewport() {
 func (m Model) View() string {
 	var view strings.Builder
 
-	// Enhanced header with model info and status
+	// Enhanced header with prominent model indicator
 	headerStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder(), false, false, true, false).
-		BorderForeground(styles.SubtleStyle.GetForeground()).
-		Padding(0, 1)
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(styles.TitleStyle.GetForeground()).
+		Padding(0, 2).
+		MarginBottom(1).
+		Background(lipgloss.Color("235")).
+		Width(m.width - 4)
 
 	modelIcon := "🤖"
+	statusIcon := ""
 	if m.streaming {
 		modelIcon = "⚡"
+		statusIcon = " • 🔄 thinking..."
+	} else {
+		statusIcon = " • ✅ ready"
 	}
 
-	headerContent := fmt.Sprintf("%s %s", modelIcon, m.SelectedModel)
-	if m.streaming {
-		headerContent += " • thinking..."
-	}
+	// Create a more prominent model indicator
+	modelLabel := lipgloss.NewStyle().
+		Foreground(styles.SubtleStyle.GetForeground()).
+		Render("Current Model: ")
 
-	header := headerStyle.Render(
-		lipgloss.NewStyle().
-			Foreground(styles.TitleStyle.GetForeground()).
-			Bold(true).
-			Render(headerContent),
-	) + "\n"
+	modelName := lipgloss.NewStyle().
+		Foreground(styles.TitleStyle.GetForeground()).
+		Bold(true).
+		Render(fmt.Sprintf("%s %s", modelIcon, m.SelectedModel))
+
+	statusText := lipgloss.NewStyle().
+		Foreground(styles.SubtleStyle.GetForeground()).
+		Render(statusIcon)
+
+	headerContent := lipgloss.JoinHorizontal(lipgloss.Left, modelLabel, modelName, statusText)
+	header := headerStyle.Render(headerContent) + "\n"
 
 	view.WriteString(header)
 
@@ -441,4 +457,61 @@ func (m Model) View() string {
 	}
 
 	return view.String()
+}
+
+// LoadFromSession loads a chat session into the current model
+func (m *Model) LoadFromSession(session *chathistory.ChatSession) {
+	m.History = make([]string, len(session.History))
+	copy(m.History, session.History)
+	m.SelectedModel = session.Model
+	m.currentSession = session
+	m.codeBlocks = []string{}
+	m.selectedCode = 0
+	m.showCodeHelp = false
+	m.streaming = false
+	m.err = nil
+	m.renderViewport()
+}
+
+// SaveToSession saves the current chat to a session
+func (m *Model) SaveToSession() (*chathistory.ChatSession, error) {
+	historyManager, err := chathistory.NewChatHistoryManager()
+	if err != nil {
+		return nil, err
+	}
+
+	if m.currentSession == nil {
+		// Create new session
+		m.currentSession = &chathistory.ChatSession{
+			Model:   m.SelectedModel,
+			History: make([]string, len(m.History)),
+		}
+		copy(m.currentSession.History, m.History)
+	} else {
+		// Update existing session
+		m.currentSession.Model = m.SelectedModel
+		m.currentSession.History = make([]string, len(m.History))
+		copy(m.currentSession.History, m.History)
+	}
+
+	if err := historyManager.SaveSession(m.currentSession); err != nil {
+		return nil, err
+	}
+
+	return m.currentSession, nil
+}
+
+// AutoSaveSession automatically saves the session after each response
+func (m *Model) AutoSaveSession() {
+	// Only auto-save if we have meaningful conversation (more than just welcome message)
+	if len(m.History) > 2 {
+		go func() {
+			m.SaveToSession()
+		}()
+	}
+}
+
+// GetCurrentSession returns the current session
+func (m *Model) GetCurrentSession() *chathistory.ChatSession {
+	return m.currentSession
 }

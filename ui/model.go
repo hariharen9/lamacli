@@ -10,6 +10,7 @@ import (
 	"github.com/hariharen9/lamacli/fileops"
 	"github.com/hariharen9/lamacli/llm"
 	"github.com/hariharen9/lamacli/ui/chat"
+	"github.com/hariharen9/lamacli/ui/chathistory"
 	"github.com/hariharen9/lamacli/ui/filetree"
 	"github.com/hariharen9/lamacli/ui/fileviewer"
 	"github.com/hariharen9/lamacli/ui/modelselect"
@@ -33,6 +34,7 @@ const (
 	fileTreeView
 	fileViewerView
 	modelSelectView
+	chatHistoryView
 	helpView
 )
 
@@ -45,6 +47,7 @@ type Model struct {
 	fileviewer       fileviewer.Model
 	modelselect      *modelselect.Model
 	chat             chat.Model
+	chatHistory      *chathistory.Model
 	llmClient        *llm.OllamaClient
 	viewMode         viewMode
 	width            int
@@ -83,11 +86,18 @@ func InitialModel() Model {
 		}
 	}
 
+	// Initialize chat history
+	chatHistoryModel, err := chathistory.New()
+	if err != nil && initialErr == nil {
+		initialErr = fmt.Errorf("Chat history initialization failed: %w", err)
+	}
+
 	return Model{
 		filetree:      ft,
 		fileviewer:    fileviewer.New(),
 		modelselect:   ms,
 		chat:          chat.New(llmClient, defaultModel),
+		chatHistory:   chatHistoryModel,
 		llmClient:     llmClient,
 		viewMode:      chatView, // Start with chat view
 		selectedModel: defaultModel,
@@ -124,6 +134,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chat.ContextFileName = filepath.Base(msg.path)
 		m.viewMode = chatView
 		m.fileContextMode = false
+		return m, nil
+
+	case chathistory.SessionSelectedMsg:
+		// Load selected session into chat
+		m.chat.LoadFromSession(msg.Session)
+		m.selectedModel = msg.Session.Model
+		m.viewMode = chatView
+		return m, nil
+
+	case chathistory.SessionDeletedMsg:
+		// Session was deleted, just stay in history view
 		return m, nil
 
 	case errMsg:
@@ -201,6 +222,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		case "M":
+			// Only allow model switching when not in chat view OR when chat input is empty
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = modelSelectView
 				if m.modelselect == nil {
@@ -220,9 +242,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.chat.Reset()
 				return m, nil
 			}
-		case "H":
+		case "ctrl+h":
 			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
 				m.viewMode = helpView
+				return m, nil
+			}
+		case "L":
+			if m.viewMode != chatView || m.chat.TextInput.Value() == "" {
+				if m.chatHistory != nil {
+					m.viewMode = chatHistoryView
+					return m, tea.Batch(m.chatHistory.Init(), func() tea.Msg {
+						return tea.WindowSizeMsg{Width: m.width, Height: m.height}
+					})
+				}
+			}
+		case "S":
+			if m.viewMode == chatView && m.chat.TextInput.Value() == "" {
+				// Auto-save current session
+				m.chat.AutoSaveSession()
 				return m, nil
 			}
 		default:
@@ -250,9 +287,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					log.SetOutput(f)
 					log.Printf("DEBUG: Model selection completed, selected model: %s", m.selectedModel)
 					f.Close()
-					m.chat = chat.New(m.llmClient, m.selectedModel)
+					// Update the model without recreating the chat (preserves UI state)
+					m.chat.SetModel(m.selectedModel)
+					// Reset model selection for next use
+					newModelSelect, err := modelselect.New(m.llmClient)
+					if err == nil {
+						m.modelselect = newModelSelect
+					}
 					m.viewMode = chatView
-					return m, m.chat.Init()
+					return m, nil
 				}
 			}
 			cmd = updateCmd
@@ -261,6 +304,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		updatedChat, newCmd := m.chat.Update(msg)
 		m.chat = updatedChat.(chat.Model)
 		cmd = newCmd
+	case chatHistoryView:
+		if m.chatHistory != nil {
+			updatedHistory, updateCmd := m.chatHistory.Update(msg)
+			if ch, ok := updatedHistory.(*chathistory.Model); ok {
+				m.chatHistory = ch
+			}
+			cmd = updateCmd
+		}
 	case helpView:
 		cmd = nil
 	}
@@ -275,15 +326,22 @@ func (m Model) helpView() string {
 
 	switch m.viewMode {
 	case chatView:
-		title = "💬 Chat"
+		// Include model name in chat view title
+		modelName := "Unknown"
+		if m.selectedModel != "" {
+			modelName = m.selectedModel
+		}
+		title = fmt.Sprintf("💬 Chat • 🤖 %s", modelName)
 		helpItems = []string{
 			"↑/↓: scroll history",
 			"enter: send message",
 			"F: file explorer",
 			"M: switch model",
+			"L: load history",
+			"S: save session",
 			"R: reset chat",
 			"C: copy code blocks",
-			"H: help",
+			"ctrl+h: help",
 			"ctrl+c: exit",
 		}
 	case fileTreeView:
@@ -309,6 +367,16 @@ func (m Model) helpView() string {
 		helpItems = []string{
 			"↑/↓: navigate models",
 			"enter: select model",
+			"esc: back to chat",
+			"ctrl+c: exit",
+		}
+	case chatHistoryView:
+		title = "📚 Chat History"
+		helpItems = []string{
+			"↑/↓: navigate sessions",
+			"enter: load session",
+			"d/del: delete session",
+			"r: refresh",
 			"esc: back to chat",
 			"ctrl+c: exit",
 		}
@@ -394,7 +462,7 @@ func (m Model) renderHelpContent() string {
 	content.WriteString("\n")
 	content.WriteString(itemStyle.Render("• " + keyStyle.Render("R") + " - Reset chat history (clears conversation)"))
 	content.WriteString("\n")
-	content.WriteString(itemStyle.Render("• " + keyStyle.Render("H") + " - Show this help screen"))
+		content.WriteString(itemStyle.Render("• " + keyStyle.Render("Ctrl+H") + " - Show this help screen"))
 	content.WriteString("\n")
 	content.WriteString(itemStyle.Render("• " + keyStyle.Render("Esc") + " - Return to chat from any view"))
 	content.WriteString("\n\n")
@@ -426,7 +494,7 @@ func (m Model) renderHelpContent() string {
 	// Tips and Tricks
 	content.WriteString(headerStyle.Render("💡 Tips and Tricks"))
 	content.WriteString("\n")
-	content.WriteString(itemStyle.Render("• All command keys (F, M, R, C, H) are uppercase only"))
+		content.WriteString(itemStyle.Render("• All command keys (F, M, R, C) are uppercase only"))
 	content.WriteString("\n")
 	content.WriteString(itemStyle.Render("• Lowercase letters are used for typing messages normally"))
 	content.WriteString("\n")
@@ -465,6 +533,10 @@ func (m Model) View() string {
 		s = m.modelselect.View()
 	case chatView:
 		s = m.chat.View()
+	case chatHistoryView:
+		if m.chatHistory != nil {
+			s = m.chatHistory.View()
+		}
 	case helpView:
 		s = m.renderHelpContent()
 	}

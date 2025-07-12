@@ -1,33 +1,25 @@
 # LamaCLI 🦙✨
 
-
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![GitHub Stars](https://img.shields.io/github/stars/hariharen9/lamacli?style=social)
 
-## 🚀 Unleash the Power of Local LLMs, Right in Your Terminal!
+## 🚀 Your Local LLM Assistant, Right in Your Terminal!
 
-LamaCLI is a sleek, intuitive, and powerful command-line interface (CLI) tool that brings the magic of Large Language Models (LLMs) directly to your terminal, powered by [Ollama](https://ollama.ai/). Forget context switching and privacy concerns; with LamaCLI, your AI assistant is always just a `ctrl+c` away (well, two `ctrl+c`s for safety!).
+LamaCLI is a powerful and intuitive command-line interface (CLI) tool that brings the magic of Large Language Models (LLMs) directly to your terminal, powered by [Ollama](https://ollama.ai/). 
 
-Designed for developers, writers, and anyone who craves efficiency, LamaCLI integrates seamlessly into your workflow, offering a rich, interactive chat experience, file browsing, and instant context sharing—all without ever leaving your favorite terminal.
+Engage with your AI assistant, browse files, and share context seamlessly—all without leaving your terminal.
 
 ## ✨ Features
 
-*   **Interactive Chat Interface:** Engage with your LLM in a beautiful, real-time chat environment.
-*   **Streaming Responses:** Watch as your AI assistant types, providing a dynamic and engaging experience.
-*   **Markdown Rendering:** Enjoy fully rendered markdown responses, including syntax-highlighted code blocks, making complex information easy to digest.
-*   **Contextual File Integration:**
-    *   **`@` Command:** Easily inject the content of any local file directly into your chat prompt for instant, context-aware AI interactions.
-    *   **Integrated File Explorer:** Browse your project files directly within the application.
-    *   **File Viewer:** Preview file contents without leaving the CLI.
-*   **Ollama Model Selection:** Seamlessly switch between different Ollama models to suit your task.
-*   **Code Block Copying:** Quickly copy code snippets from AI responses to your clipboard with a single keypress.
-*   **Safe Exit Confirmation:** Prevent accidental exits with a double `Ctrl+C` confirmation.
-*   **Intuitive Key Bindings:** Navigate and interact with the application effortlessly.
-*   **Beautiful Theming:** A delightful user experience with a modern, eye-pleasing color palette.
+*   **Interactive Chat:** Real-time, beautiful chat experience with streaming responses.
+*   **Markdown Support:** Enjoy fully rendered markdown, including syntax-highlighted code.
+*   **Contextual File Integration:** Easily inject file content into your prompts (`@` command), browse files, and preview them.
+*   **Ollama Model Selection:** Seamlessly switch between different Ollama models.
+*   **Code Copying:** Quickly copy code snippets from AI responses.
+*   **Intuitive Key Bindings:** Effortless navigation and interaction.
+*   **Beautiful Theming:** A modern, eye-pleasing color palette.
 
-## ⚡️ Get Started in Seconds!
-
-Ready to supercharge your terminal?
+## ⚡️ Get Started
 
 ### Prerequisites
 
@@ -106,7 +98,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## ❤️ Support LamaCLI
 
-LamaCLI is an open-source project built with passion. If you find this tool useful and would like to support its continued development, consider buying me a coffee or contributing via PayPal! Your support helps keep this project alive and thriving.
+LamaCLI is an open-source project. Your support helps keep this project alive and thriving!
 <p align="center">
     <a href="https://www.buymeacoffee.com/hariharen">
         <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee" />
@@ -115,7 +107,6 @@ LamaCLI is an open-source project built with passion. If you find this tool usef
         <img src="https://img.shields.io/badge/Donate-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="PayPal" />
     </a>
 </p>
-
 
 ## 🙏 Credits
 
