@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hariharen9/lamacli/cli"
 	"github.com/hariharen9/lamacli/ui"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -27,6 +28,22 @@ const lamaPortrait = `
 `
 
 func main() {
+	// Check if command line arguments are provided for CLI mode
+	if len(os.Args) > 1 {
+		// Handle CLI commands
+		if err := cli.ProcessCLICommand(os.Args); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	// No arguments provided - start interactive mode
+	startInteractiveMode()
+}
+
+// startInteractiveMode initializes and runs the interactive TUI
+func startInteractiveMode() {
 	initialModel := ui.InitialModel()
 	if initialModel.Err != nil {
 		errorStyle := lipgloss.NewStyle().
