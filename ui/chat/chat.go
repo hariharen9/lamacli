@@ -4,6 +4,7 @@ import (
 	"fmt"
 	os "os"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/atotto/clipboard"
@@ -47,10 +48,10 @@ type Model struct {
 	width           int
 	height          int
 	renderer        *glamour.TermRenderer
-	codeBlocks      []string // Store extracted code blocks
-	selectedCode    int      // Currently selected code block for copying
-	showCodeHelp    bool     // Show code copy help
-	ContextFileName string   // Name of the file added to context
+	codeBlocks      []string                 // Store extracted code blocks
+	selectedCode    int                      // Currently selected code block for copying
+	showCodeHelp    bool                     // Show code copy help
+	ContextFileName string                   // Name of the file added to context
 	currentSession  *chathistory.ChatSession // Current chat session for auto-saving
 }
 
@@ -62,6 +63,16 @@ func New(llmClient *llm.OllamaClient, selectedModel string) Model {
 	ti.CharLimit = 4096
 	ti.PromptStyle = styles.PromptStyle
 	ti.TextStyle = styles.TextInputStyle
+	// Clear any initial value to prevent gibberish on macOS
+	ti.SetValue("")
+
+	// Apply platform-specific fixes
+	if runtime.GOOS == "darwin" {
+		// macOS-specific initialization to prevent input issues
+		ti.SetValue("")
+		// Force a clean state by resetting the cursor position
+		ti.SetCursor(0)
+	}
 
 	vp := viewport.New(80, 20)
 
@@ -175,6 +186,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Update TextInput and viewport after special key handling
+	// Filter out potential problematic key sequences on macOS
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		// Skip certain problematic key sequences that might cause gibberish
+		if keyMsg.Type == tea.KeyRunes {
+			// Filter out non-printable characters that might cause display issues
+			for _, r := range keyMsg.Runes {
+				if r < 32 && r != 9 && r != 10 && r != 13 { // Allow tab, newline, carriage return
+					// Skip this update if it contains problematic control characters
+					return m, tea.Batch(cmds...)
+				}
+			}
+		}
+	}
+
 	m.TextInput, cmd = m.TextInput.Update(msg)
 	cmds = append(cmds, cmd)
 
@@ -199,6 +224,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if !m.ready {
 			m.ready = true
+			// Clean text input state on first ready event (macOS fix)
+			if runtime.GOOS == "darwin" {
+				currentValue := m.TextInput.Value()
+				m.TextInput.SetValue("")
+				m.TextInput.SetValue(currentValue)
+			}
 		}
 		m.renderViewport()
 
@@ -257,9 +288,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case tea.KeyRunes:
 			// Check for "@" to trigger file context selection
-			if string(msg.Runes) == "@" {
+			if len(msg.Runes) == 1 && msg.Runes[0] == '@' {
 				return m, func() tea.Msg {
 					return FileContextRequestMsg{}
+				}
+			}
+			// Filter out any remaining problematic sequences
+			for _, r := range msg.Runes {
+				if r < 32 && r != 9 && r != 10 && r != 13 {
+					// Skip processing if control characters are present
+					return m, nil
 				}
 			}
 		}
