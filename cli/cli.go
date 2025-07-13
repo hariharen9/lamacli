@@ -25,15 +25,15 @@ const (
 
 // CommandOptions holds options for CLI commands
 type CommandOptions struct {
-	Model       string
-	Context     string
-	Include     string
+	Model        string
+	Context      string
+	Include      string
 	SystemPrompt string
 }
 
 // Version information
 const (
-	Version = "1.2.0"
+	Version = "0.2.0"
 )
 
 // ProcessCLICommand processes CLI commands with flags and arguments
