@@ -99,7 +99,7 @@ func (m *Model) FormCompleted() bool {
 
 // View returns the string representation of the UI.
 func (m Model) View() string {
-	return styles.AppStyle.Render(m.form.View())
+	return styles.AppStyle().Render(m.form.View())
 }
 
 // GetSelectedModel returns the currently selected model from the form.

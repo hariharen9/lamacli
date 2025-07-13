@@ -15,6 +15,7 @@ import (
 	"github.com/hariharen9/lamacli/ui/fileviewer"
 	"github.com/hariharen9/lamacli/ui/modelselect"
 	"github.com/hariharen9/lamacli/ui/styles"
+	"github.com/hariharen9/lamacli/ui/theme"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -117,9 +118,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.filetree.List.SetSize(msg.Width, msg.Height-styles.AppStyle.GetVerticalFrameSize()-lipgloss.Height(m.helpView()))
-		m.fileviewer.Viewport.Width = msg.Width - styles.AppStyle.GetHorizontalFrameSize()
-		m.fileviewer.Viewport.Height = msg.Height - styles.AppStyle.GetVerticalFrameSize() - lipgloss.Height(m.helpView())
+		m.filetree.List.SetSize(msg.Width, msg.Height-styles.AppStyle().GetVerticalFrameSize()-lipgloss.Height(m.helpView()))
+		m.fileviewer.Viewport.Width = msg.Width - styles.AppStyle().GetHorizontalFrameSize()
+		m.fileviewer.Viewport.Height = msg.Height - styles.AppStyle().GetVerticalFrameSize() - lipgloss.Height(m.helpView())
 
 	case chat.FileContextRequestMsg:
 		m.viewMode = fileTreeView
@@ -256,12 +257,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					})
 				}
 			}
-		case "S":
-			if m.viewMode == chatView && m.chat.TextInput.Value() == "" {
-				// Auto-save current session
-				m.chat.AutoSaveSession()
-				return m, nil
-			}
+		case "ctrl+t":
+			theme.NextTheme()
+			return m, nil
 		default:
 			// Any other key press cancels the exit confirmation
 			if m.exitConfirmation {
@@ -337,11 +335,13 @@ func (m Model) helpView() string {
 			"enter: send message",
 			"F: file explorer",
 			"M: switch model",
+			"alt+t: use templates",
 			"L: load history",
 			"S: save session",
 			"R: reset chat",
 			"C: copy code blocks",
 			"ctrl+h: help",
+			"ctrl+t: change theme",
 			"ctrl+c: exit",
 		}
 	case fileTreeView:
@@ -390,17 +390,17 @@ func (m Model) helpView() string {
 
 	// Create a responsive help bar that wraps when needed
 	titleStyle := lipgloss.NewStyle().
-		Foreground(styles.TitleStyle.GetForeground()).
+		Foreground(styles.TitleStyle().GetForeground()).
 		Bold(true).
 		PaddingRight(2)
 
 	helpStyle := lipgloss.NewStyle().
-		Foreground(styles.SubtleStyle.GetForeground()).
+		Foreground(styles.SubtleStyle().GetForeground()).
 		PaddingLeft(1).
 		PaddingRight(1)
 
 	separatorStyle := lipgloss.NewStyle().
-		Foreground(styles.SubtleStyle.GetForeground()).
+		Foreground(styles.SubtleStyle().GetForeground()).
 		SetString(" • ")
 
 	// Calculate available width (assuming some padding)
@@ -447,22 +447,22 @@ func (m Model) helpView() string {
 // renderHelpContent returns the detailed help content
 func (m Model) renderHelpContent() string {
 	titleStyle := lipgloss.NewStyle().
-		Foreground(styles.TitleStyle.GetForeground()).
+		Foreground(styles.TitleStyle().GetForeground()).
 		Bold(true).
 		Align(lipgloss.Center).
 		Padding(1, 2)
 
 	headerStyle := lipgloss.NewStyle().
-		Foreground(styles.TitleStyle.GetForeground()).
+		Foreground(styles.TitleStyle().GetForeground()).
 		Bold(true).
 		PaddingTop(1)
 
 	itemStyle := lipgloss.NewStyle().
-		Foreground(styles.SubtleStyle.GetForeground()).
+		Foreground(styles.SubtleStyle().GetForeground()).
 		PaddingLeft(2)
 
 	keyStyle := lipgloss.NewStyle().
-		Foreground(styles.StatusStyle.GetForeground()).
+		Foreground(styles.StatusStyle().GetForeground()).
 		Bold(true)
 
 	var content strings.Builder
@@ -488,9 +488,13 @@ func (m Model) renderHelpContent() string {
 	content.WriteString("\n")
 	content.WriteString(itemStyle.Render("• " + keyStyle.Render("M") + " - Switch between different AI models"))
 	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("Alt+T") + " - Use pre-defined templates (Code Review, Documentation, Debugging)"))
+	content.WriteString("\n")
 	content.WriteString(itemStyle.Render("• " + keyStyle.Render("R") + " - Reset chat history (clears conversation)"))
 	content.WriteString("\n")
 		content.WriteString(itemStyle.Render("• " + keyStyle.Render("Ctrl+H") + " - Show this help screen"))
+	content.WriteString("\n")
+	content.WriteString(itemStyle.Render("• " + keyStyle.Render("Ctrl+T") + " - Cycle through themes"))
 	content.WriteString("\n")
 	content.WriteString(itemStyle.Render("• " + keyStyle.Render("Esc") + " - Return to chat from any view"))
 	content.WriteString("\n\n")
@@ -541,7 +545,7 @@ func (m Model) renderHelpContent() string {
 
 	// Footer
 	footerStyle := lipgloss.NewStyle().
-		Foreground(styles.SubtleStyle.GetForeground()).
+		Foreground(styles.SubtleStyle().GetForeground()).
 		Align(lipgloss.Center).
 		Padding(1, 2)
 	content.WriteString(footerStyle.Render("Press Esc to return to chat"))
@@ -573,24 +577,24 @@ func (m Model) View() string {
 	if m.Err != nil {
 		errorView := lipgloss.JoinVertical(
 			lipgloss.Top,
-			styles.ErrorStyle.Render(fmt.Sprintf("❌ Error: %v", m.Err)),
-			styles.SubtleStyle.Render("Please ensure Ollama is running and you have models available."),
-			styles.SubtleStyle.Render("Try running: ollama pull llama3.2:3b"),
+			styles.ErrorStyle().Render(fmt.Sprintf("❌ Error: %v", m.Err)),
+			styles.SubtleStyle().Render("Please ensure Ollama is running and you have models available."),
+			styles.SubtleStyle().Render("Try running: ollama pull llama3.2:3b"),
 		)
 		return lipgloss.JoinVertical(
 			lipgloss.Top,
-			styles.AppStyle.Render(errorView),
+			styles.AppStyle().Render(errorView),
 			m.helpView(),
 		)
 	}
 
 	// Main content with better spacing
-	mainContent := styles.AppStyle.Render(s)
+	mainContent := styles.AppStyle().Render(s)
 	helpBar := m.helpView()
 
 	if m.exitConfirmation {
 		exitMessage := lipgloss.NewStyle().
-			Foreground(styles.ErrorStyle.GetForeground()).
+			Foreground(styles.ErrorStyle().GetForeground()).
 			Bold(true).
 			Render("Are you sure you want to exit? Press Ctrl+C again to confirm.")
 		helpBar = lipgloss.JoinVertical(lipgloss.Left, helpBar, exitMessage)

@@ -39,10 +39,10 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		str = i.Path + "/"
 	}
 
-	fn := styles.ItemStyle.Render
+	fn := styles.ItemStyle().Render
 	if index == m.Index() {
 		fn = func(s ...string) string {
-			return styles.SelectedItemStyle.Render("> " + s[0])
+			return styles.SelectedItemStyle().Render("> " + s[0])
 		}
 	}
 
@@ -86,7 +86,7 @@ func (m *Model) readDir(path string) error {
 
 	m.path, _ = filepath.Abs(path)
 	m.List.Title = m.path
-	m.List.Styles.Title = styles.TitleStyle.Copy().
+	m.List.Styles.Title = styles.TitleStyle().Copy().
 		// Show a shorter path in the title
 		MaxWidth(50).
 		Italic(true)

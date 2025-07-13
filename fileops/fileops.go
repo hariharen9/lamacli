@@ -39,6 +39,6 @@ func DeleteFile(path string) error {
 		return os.Remove(path)
 	}
 
-	fmt.Println(styles.SubtleStyle.Render("Deletion cancelled."))
+	fmt.Println(styles.SubtleStyle().Render("Deletion cancelled."))
 	return nil
 }

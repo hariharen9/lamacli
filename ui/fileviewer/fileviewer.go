@@ -20,7 +20,7 @@ func New() Model {
 	vp := viewport.New(80, 20)
 	vp.Style = lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(styles.TitleStyle.GetForeground()).
+		BorderForeground(styles.TitleStyle().GetForeground()).
 		PaddingRight(2)
 
 	return Model{Viewport: vp}

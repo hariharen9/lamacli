@@ -53,6 +53,10 @@ type Model struct {
 	showCodeHelp    bool                     // Show code copy help
 	ContextFileName string                   // Name of the file added to context
 	currentSession  *chathistory.ChatSession // Current chat session for auto-saving
+
+	// New field for chat templates
+	chatTemplates   map[string]string
+	selectedTemplate string
 }
 
 // New creates a new chat model.
@@ -61,8 +65,8 @@ func New(llmClient *llm.OllamaClient, selectedModel string) Model {
 	ti.Placeholder = "Type your message here..."
 	ti.Focus()
 	ti.CharLimit = 4096
-	ti.PromptStyle = styles.PromptStyle
-	ti.TextStyle = styles.TextInputStyle
+	ti.PromptStyle = styles.PromptStyle()
+	ti.TextStyle = styles.TextInputStyle()
 	// Clear any initial value to prevent gibberish on macOS
 	ti.SetValue("")
 
@@ -85,7 +89,7 @@ func New(llmClient *llm.OllamaClient, selectedModel string) Model {
 	// Add welcome message to history
 	welcomeMessage := "Welcome to LamaCLI! 🦙✨\n\nI'm ready to help you with your questions. You can:\n• Ask me anything about programming, writing, or general topics\n• Use 'F' to browse files and 'M' to switch AI models\n• Use 'C' to copy code blocks when available\n• Press 'H' for detailed help and instructions\n• Press Ctrl+C to exit\n\nWhat would you like to know?"
 
-	return Model{
+return Model{
 		viewport:      vp,
 		TextInput:     ti,
 		llmClient:     llmClient,
@@ -95,6 +99,14 @@ func New(llmClient *llm.OllamaClient, selectedModel string) Model {
 		codeBlocks:    []string{},
 		selectedCode:  0,
 		showCodeHelp:  false,
+
+// Initialize chat templates
+		chatTemplates: map[string]string{
+			"Code Review": "### Code Review Template\nReview the code provided below thoroughly, addressing the following aspects:\n1. **Readability**: Is the code easily understandable? Provide suggestions for improving readability if necessary.\n2. **Performance**: Identify any bottlenecks or optimizations that can be applied.\n3. **Best Practices**: Ensure the code adheres to language and industry best practices.\n4. **Errors and Bugs**: Highlight potential bugs or errors with recommendations for fixes.\n5. **Security**: Check for security vulnerabilities and suggest mitigations.\n\nPlease provide detailed comments or annotations within the code:\n\n\n```\n[Paste your code here] \n```",
+			"Documentation": "### Documentation Template\nGenerate comprehensive documentation for the following code or API, including:\n1. **Overview**: A brief description of the functionality and purpose.\n2. **Usage**: Include code snippets demonstrating how to effectively use the code/API.\n3. **Input Parameters**: List all parameters, including types and descriptions.\n4. **Return Values**: Document return types and their meanings.\n5. **Examples**: Provide example use cases.\n6. **Notes**: Any additional information or caveats.\n\n\n```\n[Paste your code here]\n```",
+			"Debugging": "### Debugging Template\nHelp debug the code by diagnosing the issue described and suggesting solutions. Include:\n1. **Problem Description**: Elaborate on the encountered issue.\n2. **Expected Behavior**: Detail the expected outcome of the code.\n3. **Observed Behavior**: Describe what actually happens.\n4. **Error Messages**: Include any error messages or logs.\n5. **Analysis**: Provide an analysis of potential root causes.\n6. **Solutions**: Suggest fixes or alternative approaches.\n\nAdditional context or setup that may be useful:\n\n\n```\n[Paste your code here] \n```",
+		},
+		selectedTemplate: "",
 	}
 }
 
@@ -126,10 +138,29 @@ func (m *Model) SetModel(selectedModel string) {
 	// Keep existing history and UI state
 }
 
+// cycleTemplate cycles through the available chat templates.
+func (m *Model) cycleTemplate() {
+	templates := []string{"Code Review", "Documentation", "Debugging"}
+	idx := -1
+	for i, template := range templates {
+		if template == m.selectedTemplate {
+			idx = i
+			break
+		}
+	}
+
+	idx = (idx + 1) % len(templates)
+	m.selectedTemplate = templates[idx]
+
+	// Update the text input with the selected template
+	m.TextInput.SetValue(m.chatTemplates[m.selectedTemplate])
+	m.TextInput.CursorEnd()
+}
+
 // Reset clears the chat history while preserving the model and UI state
 func (m *Model) Reset() {
 	// Clear history but keep welcome message
-	welcomeMessage := "Welcome to LamaCLI! 🦙✨\n\nI'm ready to help you with your questions. You can:\n• Ask me anything about programming, writing, or general topics\n• Use 'F' to browse files and 'M' to switch AI models\n• Use 'C' to copy code blocks when available\n• Press 'H' for detailed help and instructions\n• Press Ctrl+C to exit\n\nWhat would you like to know?"
+	welcomeMessage := "Welcome to LamaCLI! 🦙✨\n\nI'm ready to help you with your questions. You can:\n• Ask me anything about programming, writing, or general topics\n• Use 'Alt+T' to switch between templates\n• Use 'F' to browse files and 'M' to switch AI models\n• Use 'C' to copy code blocks when available\n• Press 'H' for detailed help and instructions\n• Press Ctrl+C to exit\n\nWhat would you like to know?"
 	m.History = []string{"", welcomeMessage}
 	m.codeBlocks = []string{}
 	m.selectedCode = 0
@@ -153,22 +184,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Handle special keys BEFORE text input updates
 	if keyMsg, ok := msg.(tea.KeyMsg); ok {
-		if m.TextInput.Value() == "" {
-			switch keyMsg.String() {
-			case "C":
-				if len(m.codeBlocks) > 0 {
-					m.showCodeHelp = !m.showCodeHelp
-					return m, nil
-				}
-			case "j", "down":
-				if m.showCodeHelp && len(m.codeBlocks) > 0 {
-					m.selectedCode = (m.selectedCode + 1) % len(m.codeBlocks)
-					return m, nil
-				}
-			case "k", "up":
-				if m.showCodeHelp && len(m.codeBlocks) > 0 {
-					m.selectedCode = (m.selectedCode - 1 + len(m.codeBlocks)) % len(m.codeBlocks)
-					return m, nil
+		switch keyMsg.String() {
+		case "alt+t":
+			m.cycleTemplate()
+			return m, nil
+		default:
+			if m.TextInput.Value() == "" {
+				switch keyMsg.String() {
+				case "C":
+					if len(m.codeBlocks) > 0 {
+						m.showCodeHelp = !m.showCodeHelp
+						return m, nil
+					}
+				case "j", "down":
+					if m.showCodeHelp && len(m.codeBlocks) > 0 {
+						m.selectedCode = (m.selectedCode + 1) % len(m.codeBlocks)
+						return m, nil
+					}
+				case "k", "up":
+					if m.showCodeHelp && len(m.codeBlocks) > 0 {
+						m.selectedCode = (m.selectedCode - 1 + len(m.codeBlocks)) % len(m.codeBlocks)
+						return m, nil
+					}
 				}
 			}
 		}
@@ -210,8 +247,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.viewport.Width = msg.Width - styles.ChatBoxStyle.GetHorizontalFrameSize()
-		m.viewport.Height = msg.Height - lipgloss.Height(m.TextInput.View()) - styles.ChatBoxStyle.GetVerticalFrameSize() - 2
+		m.viewport.Width = msg.Width - styles.ChatBoxStyle().GetHorizontalFrameSize()
+		m.viewport.Height = msg.Height - lipgloss.Height(m.TextInput.View()) - styles.ChatBoxStyle().GetVerticalFrameSize() - 2
 		m.TextInput.Width = msg.Width - 8 // Adjust for padding and borders
 
 		// Update renderer width
@@ -332,7 +369,7 @@ func (m *Model) renderViewport() {
 			// User messages
 			if line != "" { // Skip empty user messages (like welcome message prefix)
 				userIcon := "👤"
-				styledLine = styles.UserPromptStyle.Render(userIcon + " You: " + line)
+				styledLine = styles.UserPromptStyle().Render(userIcon + " You: " + line)
 			}
 		} else {
 			// LLM responses - render as markdown
@@ -349,10 +386,10 @@ func (m *Model) renderViewport() {
 						styledLine = llmIcon + " LLM:\n" + rendered
 					} else {
 						// Fallback to plain text if markdown rendering fails
-						styledLine = styles.LLMResponseStyle.Render(llmIcon + " LLM: " + line)
+						styledLine = styles.LLMResponseStyle().Render(llmIcon + " LLM: " + line)
 					}
 				} else {
-					styledLine = styles.LLMResponseStyle.Render(llmIcon + " LLM: " + line)
+					styledLine = styles.LLMResponseStyle().Render(llmIcon + " LLM: " + line)
 				}
 			}
 		}
@@ -377,7 +414,7 @@ func (m Model) View() string {
 	// Enhanced header with prominent model indicator
 	headerStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(styles.TitleStyle.GetForeground()).
+		BorderForeground(styles.TitleStyle().GetForeground()).
 		Padding(0, 2).
 		MarginBottom(1).
 		Background(lipgloss.Color("235")).
@@ -394,16 +431,16 @@ func (m Model) View() string {
 
 	// Create a more prominent model indicator
 	modelLabel := lipgloss.NewStyle().
-		Foreground(styles.SubtleStyle.GetForeground()).
+		Foreground(styles.SubtleStyle().GetForeground()).
 		Render("Current Model: ")
 
 	modelName := lipgloss.NewStyle().
-		Foreground(styles.TitleStyle.GetForeground()).
+		Foreground(styles.TitleStyle().GetForeground()).
 		Bold(true).
 		Render(fmt.Sprintf("%s %s", modelIcon, m.SelectedModel))
 
 	statusText := lipgloss.NewStyle().
-		Foreground(styles.SubtleStyle.GetForeground()).
+		Foreground(styles.SubtleStyle().GetForeground()).
 		Render(statusIcon)
 
 	headerContent := lipgloss.JoinHorizontal(lipgloss.Left, modelLabel, modelName, statusText)
@@ -413,10 +450,10 @@ func (m Model) View() string {
 
 	// Enhanced chat box with better styling
 	chatBoxHeight := m.height - lipgloss.Height(m.TextInput.View()) - lipgloss.Height(header) - 3
-	enhancedChatBox := styles.ChatBoxStyle.
+	enhancedChatBox := styles.ChatBoxStyle().
 		Width(m.width).
 		Height(chatBoxHeight).
-		BorderForeground(styles.TitleStyle.GetForeground())
+		BorderForeground(styles.TitleStyle().GetForeground())
 
 	view.WriteString(enhancedChatBox.Render(m.viewport.View()))
 	view.WriteString("\n")
@@ -424,7 +461,7 @@ func (m Model) View() string {
 	// Enhanced input with prompt indicator
 	inputStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder(), true, true, false, true).
-		BorderForeground(styles.TitleStyle.GetForeground()).
+		BorderForeground(styles.TitleStyle().GetForeground()).
 		Padding(0, 1)
 
 	promptIndicator := "💭"
@@ -433,7 +470,7 @@ func (m Model) View() string {
 	}
 
 	inputPrefix := lipgloss.NewStyle().
-		Foreground(styles.PromptStyle.GetForeground()).
+		Foreground(styles.PromptStyle().GetForeground()).
 		Bold(true).
 		Render(promptIndicator + " ")
 
@@ -443,7 +480,7 @@ func (m Model) View() string {
 	// Footer with error, status, or code block help
 	if m.err != nil {
 		errorFooter := lipgloss.NewStyle().
-			Foreground(styles.ErrorStyle.GetForeground()).
+			Foreground(styles.ErrorStyle().GetForeground()).
 			Bold(true).
 			MarginTop(1).
 			Render("❌ Error: " + m.err.Error())
@@ -453,12 +490,12 @@ func (m Model) View() string {
 	// Show code block help if active
 	if m.showCodeHelp && len(m.codeBlocks) > 0 {
 		codeHelpStyle := lipgloss.NewStyle().
-			Foreground(styles.StatusStyle.GetForeground()).
+			Foreground(styles.StatusStyle().GetForeground()).
 			Bold(true).
 			MarginTop(1).
 			Padding(1, 2).
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(styles.TitleStyle.GetForeground())
+			BorderForeground(styles.TitleStyle().GetForeground())
 
 		codeHelpText := fmt.Sprintf(
 			"📎 Code Blocks (%d/%d)\n↑/↓ or j/k: Navigate • Enter: Copy • C: Close",
@@ -471,7 +508,7 @@ func (m Model) View() string {
 			if len(preview) > 100 {
 				preview = preview[:100] + "..."
 			}
-			codeHelpText += "\n\n" + styles.SubtleStyle.Render("Preview: ") + preview
+			codeHelpText += "\n\n" + styles.SubtleStyle().Render("Preview: ") + preview
 		}
 
 		codeHelp := codeHelpStyle.Render(codeHelpText)
@@ -481,7 +518,7 @@ func (m Model) View() string {
 	// Show code block indicator if blocks are available
 	if len(m.codeBlocks) > 0 && !m.showCodeHelp {
 		codeIndicator := lipgloss.NewStyle().
-			Foreground(styles.SubtleStyle.GetForeground()).
+			Foreground(styles.SubtleStyle().GetForeground()).
 			MarginTop(1).Render(fmt.Sprintf("📎 %d code block(s) available • Press C to copy", len(m.codeBlocks)))
 		return lipgloss.JoinVertical(lipgloss.Left, view.String(), codeIndicator)
 	}
@@ -489,9 +526,17 @@ func (m Model) View() string {
 	// Show attached file indicator
 	if m.ContextFileName != "" {
 		fileIndicator := lipgloss.NewStyle().
-			Foreground(styles.SubtleStyle.GetForeground()).
+			Foreground(styles.SubtleStyle().GetForeground()).
 			MarginTop(1).Render(fmt.Sprintf("📄 Attached: %s", m.ContextFileName))
 		return lipgloss.JoinVertical(lipgloss.Left, view.String(), fileIndicator)
+	}
+
+	// Show template indicator if template is selected
+	if m.selectedTemplate != "" {
+		templateIndicator := lipgloss.NewStyle().
+			Foreground(styles.SubtleStyle().GetForeground()).
+			MarginTop(1).Render(fmt.Sprintf("📝 Template: %s • Press Alt+T to switch", m.selectedTemplate))
+		return lipgloss.JoinVertical(lipgloss.Left, view.String(), templateIndicator)
 	}
 
 	return view.String()

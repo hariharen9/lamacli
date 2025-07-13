@@ -1,0 +1,71 @@
+1. Enhanced Chat Features
+•  Chat History Persistence: Save and load previous chat sessions
+•  Export Chat: Export conversations to markdown, JSON, or text files
+•  Search Chat History: Search through previous conversations
+•  Chat Templates: Pre-defined prompts for common tasks (code review, documentation, debugging)
+•  Multi-turn Context: Better context management for longer conversations
+
+2. Advanced File Operations
+•  File Creation: Create new files with templates
+•  File Editing: Basic in-app text editor
+•  File Comparison: Compare different versions of files
+•  Bulk Operations: Batch rename, copy, or move files
+•  File Watching: Monitor file changes in real-time
+
+3. Project Intelligence
+•  Project Analysis: Use LLM to analyze project structure and provide insights
+•  Code Generation: Generate boilerplate code based on project type
+•  Documentation Generation: Auto-generate README, API docs
+•  Dependency Analysis: Analyze and suggest dependency updates
+•  Test Generation: Generate unit tests for selected files
+
+4. Enhanced UI/UX
+•  Theme Switching: Multiple color themes (you already have Catppuccin!)
+•  Split View: Show file tree and chat simultaneously
+•  Tabs: Multiple open files/chats
+•  Syntax Highlighting: For code preview
+•  Mini-map: For large files
+
+5. LLM Enhancements
+•  Model Information: Show model details (size, capabilities)
+•  Custom System Prompts: Save and reuse custom prompts
+•  Temperature Control: Adjust model creativity
+•  Token Usage Tracking: Monitor API usage
+•  Model Comparison: Compare responses from different models
+
+6. Developer Tools
+•  Git Integration: Show git status, commit, diff
+•  Code Formatting: Auto-format code using appropriate formatters
+•  Linting: Integrate with language-specific linters
+•  Build Tools: Run build commands for detected project types
+•  Terminal Integration: Embedded terminal
+
+7. Export/Import Features
+•  Configuration Export: Save/load app settings
+•  Project Templates: Create and share project templates
+•  Snippet Management: Save and organize code snippets
+
+
+Better key bindings (Ctrl+H for help)
+•  Fixed chat window sizing issues
+•  Added model indicators
+•  Made the help bar responsive
+•  Fixed various bugs and compilation issues
+
+
+lamacli suggest "<prompt>"
+lamacli s --model=qwen2.5-coder:1.5b "<prompt>"
+
+lamacli explain "<command>" # explain a command
+lamacli e --model=llama3.2:1b "<command>" # explain a command with a overrided model
+
+lamacli ask "<prompt>" # ask a random question
+lamacli a --context . --include *.md "<prompt>" # ask a question with a context
+
+COMMANDS:
+ask, a      Asks a question
+suggest, s  Suggests a command.
+explain, e  Explains a command.
+config, c   Configures default language model
+version, v  Prints lamacli version.
+help, h     Shows exising help menu (with these new flag related features also)

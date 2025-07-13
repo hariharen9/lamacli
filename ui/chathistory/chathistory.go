@@ -62,9 +62,9 @@ func New() (*Model, error) {
 	l.Title = "📚 Chat History"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(true)
-	l.Styles.Title = styles.TitleStyle
-	l.Styles.PaginationStyle = styles.SubtleStyle
-	l.Styles.HelpStyle = styles.SubtleStyle
+	l.Styles.Title = styles.TitleStyle()
+	l.Styles.PaginationStyle = styles.SubtleStyle()
+	l.Styles.HelpStyle = styles.SubtleStyle()
 
 	m := &Model{
 		list:           l,
@@ -84,10 +84,10 @@ func NewItemDelegate() list.DefaultDelegate {
 	d := list.NewDefaultDelegate()
 	d.ShowDescription = true
 	d.SetHeight(3)
-	d.Styles.SelectedTitle = styles.SelectedItemStyle
-	d.Styles.SelectedDesc = styles.SelectedItemStyle.Copy().Foreground(styles.SubtleStyle.GetForeground())
-	d.Styles.NormalTitle = styles.ItemStyle
-	d.Styles.NormalDesc = styles.ItemStyle.Copy().Foreground(styles.SubtleStyle.GetForeground())
+	d.Styles.SelectedTitle = styles.SelectedItemStyle()
+	d.Styles.SelectedDesc = styles.SelectedItemStyle().Copy().Foreground(styles.SubtleStyle().GetForeground())
+	d.Styles.NormalTitle = styles.ItemStyle()
+	d.Styles.NormalDesc = styles.ItemStyle().Copy().Foreground(styles.SubtleStyle().GetForeground())
 	return d
 }
 
@@ -118,8 +118,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.list.SetWidth(msg.Width - styles.AppStyle.GetHorizontalFrameSize())
-		m.list.SetHeight(msg.Height - styles.AppStyle.GetVerticalFrameSize() - 4)
+		m.list.SetWidth(msg.Width - styles.AppStyle().GetHorizontalFrameSize())
+		m.list.SetHeight(msg.Height - styles.AppStyle().GetVerticalFrameSize() - 4)
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -157,11 +157,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View renders the chat history browser
 func (m *Model) View() string {
 	if m.err != nil {
-		return styles.ErrorStyle.Render(fmt.Sprintf("Error: %v", m.err))
+		return styles.ErrorStyle().Render(fmt.Sprintf("Error: %v", m.err))
 	}
 
 	if len(m.list.Items()) == 0 {
-		emptyMessage := styles.SubtleStyle.Render("No chat history found.\nStart a new conversation to create your first session!")
+		emptyMessage := styles.SubtleStyle().Render("No chat history found.\nStart a new conversation to create your first session!")
 		return lipgloss.JoinVertical(
 			lipgloss.Center,
 			m.list.View(),
