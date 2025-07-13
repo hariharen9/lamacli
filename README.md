@@ -17,6 +17,7 @@ Engage with your AI assistant in both **interactive mode** and **command-line mo
 ### 💬 Interactive Chat Features
 *   **Real-time Streaming:** Beautiful chat experience with live response streaming
 *   **Markdown Support:** Fully rendered markdown with syntax-highlighted code blocks
+*   **Chat Templates:** Predefined templates for common tasks (code review, documentation, debugging)
 *   **Chat History:** Persistent session storage with load/save functionality
 *   **Auto-save Sessions:** Conversations automatically saved after each interaction
 *   **Code Block Management:** Extract, navigate, and copy code snippets with ease
@@ -101,6 +102,8 @@ lamacli
 | `Ctrl+C`  | Exit application (requires two presses for confirmation)                  |
 | `L`       | Load Chat History (browse and restore previous sessions)                  |
 | `S`       | Save current session manually                                              |
+| `Alt+T`   | Cycle through chat templates (code review, documentation, debugging)      |
+| `Ctrl+T`  | Cycle through themes                                                       |
 
 ## 📺 Demo Videos
 

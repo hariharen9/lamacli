@@ -33,7 +33,7 @@ type CommandOptions struct {
 
 // Version information
 const (
-	Version = "0.2.0"
+	Version = "0.3.0"
 )
 
 // ProcessCLICommand processes CLI commands with flags and arguments
