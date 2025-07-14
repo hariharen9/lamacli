@@ -213,7 +213,7 @@ Please ensure your code adheres to the existing style and conventions.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
 
 ## ❤️ Support LamaCLI
 
