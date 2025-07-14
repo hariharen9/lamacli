@@ -30,7 +30,7 @@ jobs:
 
       - name: Install GoReleaser
         run: |
-          go install github.com/goreleaser/goreleaser@latest
+          go install github.com/goreleaser/goreleaser@v1.26.2
 
       - name: Get version from tag
         id: get_version
