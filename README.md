@@ -62,6 +62,7 @@ Engage with your AI assistant in both **interactive mode** and **command-line mo
 *   **Beautiful Theming:** Modern Catppuccin color palette
 *   **Intuitive Key Bindings:** Vim-inspired navigation with helpful shortcuts
 *   **Responsive Design:** Adapts to terminal size with smart text wrapping
+*   **Loading Indicators:** Visual feedback during model processing in both modes
 *   **Help System:** Comprehensive in-app help and command documentation
 
 ## ⚡️ Get Started
