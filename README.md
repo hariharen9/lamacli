@@ -1,10 +1,14 @@
-# LamaCLI 🦙✨
+# LamaCLI 🦙✨ <img src="./assets/lamacli%20icon.png" alt="LamaCLI Banner" width="35"/>
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) ![GitHub Stars](https://img.shields.io/github/stars/hariharen9/lamacli?style=social) ![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) ![GitHub Stars](https://img.shields.io/github/stars/hariharen9/lamacli?style=social) ![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)
 
 ## 🚀 Your Local LLM Assistant, Right in Your Terminal!
 
 LamaCLI is a powerful and intuitive command-line interface (CLI) tool that brings the magic of Large Language Models (LLMs) directly to your terminal, powered by [Ollama](https://ollama.ai/). 
+
+<p align="center">
+    <img src="./assets/lamacli%20banner.png" alt="LamaCLI Banner" width="600"/>
+</p>
 
 Engage with your AI assistant in both **interactive mode** and **command-line mode** — perfect for quick queries or extended conversations, all without leaving your terminal.
 

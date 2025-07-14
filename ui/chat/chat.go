@@ -55,7 +55,7 @@ type Model struct {
 	currentSession  *chathistory.ChatSession // Current chat session for auto-saving
 
 	// New field for chat templates
-	chatTemplates   map[string]string
+	chatTemplates    map[string]string
 	selectedTemplate string
 }
 
@@ -89,7 +89,7 @@ func New(llmClient *llm.OllamaClient, selectedModel string) Model {
 	// Add welcome message to history
 	welcomeMessage := "Welcome to LamaCLI! 🦙✨\n\nI'm ready to help you with your questions. You can:\n• Ask me anything about programming, writing, or general topics\n• Use 'F' to browse files and 'M' to switch AI models\n• Use 'C' to copy code blocks when available\n• Press 'H' for detailed help and instructions\n• Press Ctrl+C to exit\n\nWhat would you like to know?"
 
-return Model{
+	return Model{
 		viewport:      vp,
 		TextInput:     ti,
 		llmClient:     llmClient,
@@ -100,11 +100,11 @@ return Model{
 		selectedCode:  0,
 		showCodeHelp:  false,
 
-// Initialize chat templates
+		// Initialize chat templates
 		chatTemplates: map[string]string{
-			"Code Review": "### Code Review Template\nReview the code provided below thoroughly, addressing the following aspects:\n1. **Readability**: Is the code easily understandable? Provide suggestions for improving readability if necessary.\n2. **Performance**: Identify any bottlenecks or optimizations that can be applied.\n3. **Best Practices**: Ensure the code adheres to language and industry best practices.\n4. **Errors and Bugs**: Highlight potential bugs or errors with recommendations for fixes.\n5. **Security**: Check for security vulnerabilities and suggest mitigations.\n\nPlease provide detailed comments or annotations within the code:\n\n\n```\n[Paste your code here] \n```",
+			"Code Review":   "### Code Review Template\nReview the code provided below thoroughly, addressing the following aspects:\n1. **Readability**: Is the code easily understandable? Provide suggestions for improving readability if necessary.\n2. **Performance**: Identify any bottlenecks or optimizations that can be applied.\n3. **Best Practices**: Ensure the code adheres to language and industry best practices.\n4. **Errors and Bugs**: Highlight potential bugs or errors with recommendations for fixes.\n5. **Security**: Check for security vulnerabilities and suggest mitigations.\n\nPlease provide detailed comments or annotations within the code:\n\n\n```\n[Paste your code here] \n```",
 			"Documentation": "### Documentation Template\nGenerate comprehensive documentation for the following code or API, including:\n1. **Overview**: A brief description of the functionality and purpose.\n2. **Usage**: Include code snippets demonstrating how to effectively use the code/API.\n3. **Input Parameters**: List all parameters, including types and descriptions.\n4. **Return Values**: Document return types and their meanings.\n5. **Examples**: Provide example use cases.\n6. **Notes**: Any additional information or caveats.\n\n\n```\n[Paste your code here]\n```",
-			"Debugging": "### Debugging Template\nHelp debug the code by diagnosing the issue described and suggesting solutions. Include:\n1. **Problem Description**: Elaborate on the encountered issue.\n2. **Expected Behavior**: Detail the expected outcome of the code.\n3. **Observed Behavior**: Describe what actually happens.\n4. **Error Messages**: Include any error messages or logs.\n5. **Analysis**: Provide an analysis of potential root causes.\n6. **Solutions**: Suggest fixes or alternative approaches.\n\nAdditional context or setup that may be useful:\n\n\n```\n[Paste your code here] \n```",
+			"Debugging":     "### Debugging Template\nHelp debug the code by diagnosing the issue described and suggesting solutions. Include:\n1. **Problem Description**: Elaborate on the encountered issue.\n2. **Expected Behavior**: Detail the expected outcome of the code.\n3. **Observed Behavior**: Describe what actually happens.\n4. **Error Messages**: Include any error messages or logs.\n5. **Analysis**: Provide an analysis of potential root causes.\n6. **Solutions**: Suggest fixes or alternative approaches.\n\nAdditional context or setup that may be useful:\n\n\n```\n[Paste your code here] \n```",
 		},
 		selectedTemplate: "",
 	}
@@ -330,6 +330,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return FileContextRequestMsg{}
 				}
 			}
+
+			// More aggressive filtering of problematic sequences on macOS
+			if runtime.GOOS == "darwin" {
+				// Check for ANSI escape sequences which often start with ESC ([)
+				hasEscapeSequence := false
+				for _, r := range msg.Runes {
+					if r == 27 || r == 91 { // ESC or [
+						hasEscapeSequence = true
+						break
+					}
+				}
+				if hasEscapeSequence {
+					return m, nil
+				}
+			}
+
 			// Filter out any remaining problematic sequences
 			for _, r := range msg.Runes {
 				if r < 32 && r != 9 && r != 10 && r != 13 {

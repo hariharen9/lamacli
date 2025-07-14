@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/hariharen9/lamacli/cli"
 	"github.com/hariharen9/lamacli/ui"
@@ -44,6 +45,11 @@ func main() {
 
 // startInteractiveMode initializes and runs the interactive TUI
 func startInteractiveMode() {
+	// Set terminal to raw mode on macOS to help prevent escape sequence issues
+	if runtime.GOOS == "darwin" {
+		fmt.Print("\033c") // Clear terminal to reset state
+	}
+	
 	initialModel := ui.InitialModel()
 	if initialModel.Err != nil {
 		errorStyle := lipgloss.NewStyle().
