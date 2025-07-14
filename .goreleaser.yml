@@ -20,8 +20,6 @@ builds:
     goarch:
       - amd64
       - arm64
-    goarm:
-      - 7
     ignore:
       - goos: windows
         goarch: arm64
@@ -29,9 +27,6 @@ builds:
 archives:
   - id: lamacli-archive
     name_template: "lamacli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
       - LICENSE.md
       - README.md
