@@ -47,7 +47,10 @@ jobs:
       - name: Update package.json version
         run: |
           cd npm-package
-          npm version ${{ steps.get_version.outputs.VERSION }} --no-git-tag-version
+          # Update version using sed (more reliable than npm version)
+          sed -i 's/"version": "[^"]*"/"version": "${{ steps.get_version.outputs.VERSION }}"/g' package.json
+          echo "Updated package.json version to ${{ steps.get_version.outputs.VERSION }}"
+          cat package.json | grep version
 
       - name: Prepare npm package
         run: |
