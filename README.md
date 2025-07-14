@@ -214,7 +214,7 @@ Please ensure your code adheres to the existing style and conventions.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
 
 ## ❤️ Support LamaCLI
 
@@ -237,3 +237,7 @@ Special thanks to [TLM](https://github.com/yusufcanb/tlm) for inspiration on the
 <center>
 <h3>Made with 💘 for all the terminal enthusiasts 🧑‍💻.</h3>
 </center>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/trinib/trinib/82213791fa9ff58d3ca768ddd6de2489ec23ffca/images/footer.svg" width="100%">
+</p>
