@@ -12,6 +12,25 @@ LamaCLI is a powerful and intuitive command-line interface (CLI) tool that bring
 
 Engage with your AI assistant in both **interactive mode** and **command-line mode** — perfect for quick queries or extended conversations, all without leaving your terminal.
 
+---
+
+**Table of Contents**
+
+- [✨ Features](#-features)
+- [⚡️ Get Started](#️-get-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Usage](#usage)
+- [Key Bindings](#key-bindings)
+- [📺 Demo Videos](#-demo-videos)
+- [🖥️ CLI Mode Examples](#️-cli-mode-examples)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [❤️ Support LamaCLI](#️-support-lamacli)
+- [🙏 Credits](#-credits)
+
+---
+
 ## ✨ Features
 
 ### 🎯 Dual Operation Modes
@@ -111,13 +130,32 @@ lamacli
 
 ## 📺 Demo Videos
 
-### Interactive Mode Demo
-<!-- TODO: Add interactive mode demo video here -->
-_Coming soon: Video demonstration of the full interactive TUI experience_
-
-### CLI Mode Demo
-<!-- TODO: Add CLI mode demo video here -->
-_Coming soon: Video demonstration of quick CLI commands_
+<table width="100%">
+  <tr>
+    <td width="50%" align="center">
+      <b>Chatting with LLM</b>
+      <br>
+      <img src="./assets/chat.gif" alt="Chatting with LLM"/>
+    </td>
+    <td width="50%" align="center">
+      <b>File History & Code Copy</b>
+      <br>
+      <img src="./assets/copy_file_and_history.gif" alt="File History & Code Copy"/>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <b>Model Switching</b>
+      <br>
+      <img src="./assets/model_switch.gif" alt="Model Switching"/>
+    </td>
+    <td width="50%" align="center">
+      <b>Themes & Help</b>
+      <br>
+      <img src="./assets/help_and_theme.gif" alt="Themes & Help"/>
+    </td>
+  </tr>
+</table>
 
 ## 🖥️ CLI Mode Examples
 
@@ -169,7 +207,7 @@ lamacli help
 
 ## 🤝 Contributing
 
-We welcome contributions! If you have ideas for new features, bug fixes, or improvements, please feel free to.
+We welcome contributions! If you have ideas for new features, bug fixes, or improvements, please feel free to open an issue or submit a pull request.
 
 Please ensure your code adheres to the existing style and conventions.
 
@@ -196,5 +234,5 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Lipgloss](
 Special thanks to [TLM](https://github.com/yusufcanb/tlm) for inspiration on the CLI command structure for ask, suggest, and explain operations.
 
 <center>
-<h3>Made with 💘 for all the terminal enthusiasts 🧑‍💻.
-<center>
+<h3>Made with 💘 for all the terminal enthusiasts 🧑‍💻.</h3>
+</center>
