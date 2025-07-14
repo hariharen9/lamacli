@@ -95,11 +95,27 @@ ollama pull llama3.2:3b
 
 ### Installation
 
-LamaCLI is built with Go, making installation a breeze:
+LamaCLI is built with Go and available through multiple installation methods:
+
+#### 📦 Via npm (Recommended)
+
+```bash
+# Install globally
+npm install -g lamacli
+
+# Or run without installing
+npx lamacli
+```
+
+#### 🛠️ Via Go
 
 ```bash
 go install github.com/hariharen9/lamacli@latest
 ```
+
+#### 📥 Download Binary
+
+Download the latest binary for your platform from the [releases page](https://github.com/hariharen9/lamacli/releases/latest).
 
 ### Usage
 
