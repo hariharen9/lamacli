@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/hariharen9/lamacli/fileops"
 	"github.com/hariharen9/lamacli/llm"
@@ -33,7 +34,7 @@ type CommandOptions struct {
 
 // Version information
 const (
-	Version = "0.3.0"
+	Version = "0.4.0"
 )
 
 // ProcessCLICommand processes CLI commands with flags and arguments
@@ -123,8 +124,35 @@ func handleLLMCommand(command Command, args []string) error {
 		finalPrompt = fmt.Sprintf("%s\n\nContext:\n%s", prompt, contextContent)
 	}
 
+// Show simple loading indicator that works on all terminals
+	fmt.Print("Thinking")
+	
+	// Create a done channel to coordinate the loading indicator
+	loadingDone := make(chan bool)
+	
+	// Start simple dot-based loading animation
+	go func() {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+		
+		for {
+			select {
+			case <-loadingDone:
+				return
+			case <-ticker.C:
+				fmt.Print(".")
+			}
+		}
+	}()
+	
 	// Generate response
 	response, err := llmClient.GenerateResponse(model, finalPrompt, systemPrompt)
+	
+	// Stop the loading animation
+	loadingDone <- true
+	// Print a newline to finish the loading line
+	fmt.Println()
+
 	if err != nil {
 		return fmt.Errorf("failed to generate response: %w", err)
 	}
