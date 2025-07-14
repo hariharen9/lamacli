@@ -51,10 +51,6 @@ jobs:
         with:
           go-version: stable
 
-      - name: Install GoReleaser
-        run: |
-          curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
-          sudo mv ./bin/goreleaser /usr/local/bin/
 
       - name: Get version from tag
         id: get_version
@@ -65,11 +61,15 @@ jobs:
           cd npm-package
           npm version ${{ steps.get_version.outputs.VERSION }} --no-git-tag-version
 
-      - name: Build binaries and prepare npm package
-        run: |
-          # Run GoReleaser to build the binaries
-          goreleaser release --clean --skip-publish
+      - name: Build binaries with GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean --skip-publish
           
+      - name: Prepare npm package
+        run: |
           # Create necessary directories
           mkdir -p npm-package/bin
           
