@@ -1,0 +1,49 @@
+{
+  "name": "lamacli",
+  "version": "1.0.0",
+  "description": "A CLI tool for interacting with Llama models via Ollama",
+  "main": "index.js",
+  "bin": {
+    "lamacli": "index.js"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "keywords": [
+    "cli",
+    "llama",
+    "ollama",
+    "ai",
+    "chat",
+    "terminal"
+  ],
+  "author": "hariharen9",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hariharen9/lamacli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hariharen9/lamacli/issues"
+  },
+  "homepage": "https://github.com/hariharen9/lamacli#readme",
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "files": [
+    "index.js",
+    "install.js",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ]
+}

@@ -1,3 +1,43 @@
 *.env
 *.exe
 *.log
+
+# Build artifacts
+dist/
+
+# npm distribution test files
+test-npm-package/
+
+# Node.js dependencies (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# GoReleaser artifacts
+*.tar.gz
+*.zip
+checksums.txt
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup

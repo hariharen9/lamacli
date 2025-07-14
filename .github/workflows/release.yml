@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  npm-publish:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Install GoReleaser
+        run: |
+          curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
+          sudo mv ./bin/goreleaser /usr/local/bin/
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        run: |
+          cd npm-package
+          npm version ${{ steps.get_version.outputs.VERSION }} --no-git-tag-version
+
+      - name: Build binaries and prepare npm package
+        run: |
+          # Run GoReleaser to build the binaries
+          goreleaser release --clean --skip-publish
+          
+          # Create necessary directories
+          mkdir -p npm-package/bin
+          
+          # Copy the binaries to the npm package bin directory
+          for dir in dist/lamacli_*; do
+            if [ -d "$dir" ]; then
+              dirname=$(basename "$dir")
+              mkdir -p "npm-package/bin/$dirname"
+              if [ -f "$dir/lamacli.exe" ]; then
+                cp "$dir/lamacli.exe" "npm-package/bin/$dirname/lamacli.exe"
+              else
+                cp "$dir/lamacli" "npm-package/bin/$dirname/lamacli"
+                chmod +x "npm-package/bin/$dirname/lamacli"
+              fi
+            fi
+          done
+
+      - name: Publish to npm
+        run: |
+          cd npm-package
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

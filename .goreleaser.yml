@@ -1,0 +1,60 @@
+version: 2
+
+project_name: lamacli
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: lamacli
+    main: ./main.go
+    binary: lamacli
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    goarm:
+      - 7
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: lamacli-archive
+    name_template: "lamacli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE.md
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+      - "^refactor:"
+
+release:
+  github:
+    owner: hariharen9
+    name: lamacli
+  draft: false
+  prerelease: auto
+  name_template: "v{{ .Version }}"
+
+dist: dist
