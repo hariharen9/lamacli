@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"runtime"
@@ -18,7 +19,7 @@ const lamaPortrait = `
      /\__\    /\  \        /\__\        /\  \        /\  \        /\__\      ___   
     /:/  /   /::\  \      /::|  |      /::\  \      /::\  \      /:/  /     /\  \  
    /:/  /   /:/\:\  \    /:|:|  |     /:/\:\  \    /:/\:\  \    /:/  /      \:\  \ 
-  /:/  /   /::\~\:\  \  /:/|:|__|__  /::\~\:\  \  /:/  \:\  \  /:/  /       /::\__\
+  /:/  /   /::\~\:\  \  /:/|:|__|__  /::\~\:\  \  /:/  \:\  \  /:/  /       /::\__
  /:/__/   /:/\:\ \:\__\/:/ |::::\__\/:/\:\ \:\__\/:/__/ \:\__\/:/__/     __/:/\/__/
  \:\  \   \/__\:\/:/  /\/__/~~/:/  /\/__\:\/:/  /\:\  \  \/__/\:\  \    /\/:/  /   
   \:\  \       \::/  /       /:/  /      \::/  /  \:\  \       \:\  \   \::/__/    
@@ -29,17 +30,36 @@ const lamaPortrait = `
 `
 
 func main() {
-	// Check if command line arguments are provided for CLI mode
-	if len(os.Args) > 1 {
-		// Handle CLI commands
-		if err := cli.ProcessCLICommand(os.Args); err != nil {
+	// Define a command-line flag for the theme.
+	theme := flag.String("theme", "dark", "Set the UI theme ('dark' or 'light')")
+	flag.Parse()
+
+	// Set the background color profile based on the theme flag.
+	// This prevents lipgloss from querying the terminal, fixing issues on macOS.
+	switch *theme {
+	case "dark":
+		lipgloss.SetHasDarkBackground(true)
+	case "light":
+		lipgloss.SetHasDarkBackground(false)
+	default:
+		fmt.Fprintf(os.Stderr, "Error: Invalid theme value '%s'. Please use 'dark' or 'light'.\n", *theme)
+		os.Exit(1)
+	}
+
+	// After parsing our own flags, check if there are any remaining positional arguments.
+	// If there are, we run in CLI mode. Otherwise, we start the interactive TUI.
+	if flag.NArg() > 0 {
+		// Reconstruct the arguments for the CLI command processor.
+		// os.Args[0] is the program name, and flag.Args() contains the rest.
+		cliArgs := append([]string{os.Args[0]}, flag.Args()...)
+		if err := cli.ProcessCLICommand(cliArgs); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 		return
 	}
 
-	// No arguments provided - start interactive mode
+	// No positional arguments provided - start interactive mode.
 	startInteractiveMode()
 }
 
@@ -49,7 +69,7 @@ func startInteractiveMode() {
 	if runtime.GOOS == "darwin" {
 		fmt.Print("\033c") // Clear terminal to reset state
 	}
-	
+
 	initialModel := ui.InitialModel()
 	if initialModel.Err != nil {
 		errorStyle := lipgloss.NewStyle().

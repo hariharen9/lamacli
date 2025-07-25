@@ -19,7 +19,7 @@ const (
 	CommandAsk     Command = "ask"
 	CommandSuggest Command = "suggest"
 	CommandExplain Command = "explain"
-	CommandConfig  Command = "config"
+	CommandModels  Command = "models"
 	CommandVersion Command = "version"
 	CommandHelp    Command = "help"
 )
@@ -53,8 +53,8 @@ func ProcessCLICommand(args []string) error {
 	case CommandVersion:
 		printVersion()
 		return nil
-	case CommandConfig:
-		return handleConfigCommand(args[2:])
+	case CommandModels:
+		return handleModelsCommand(args[2:])
 	case CommandAsk, CommandSuggest, CommandExplain:
 		return handleLLMCommand(command, args[2:])
 	default:
@@ -71,8 +71,8 @@ func parseCommand(cmdStr string) Command {
 		return CommandSuggest
 	case "explain", "e":
 		return CommandExplain
-	case "config", "c":
-		return CommandConfig
+	case "models", "m":
+		return CommandModels
 	case "version", "v":
 		return CommandVersion
 	case "help", "h":
@@ -275,8 +275,8 @@ func printFormattedResponse(command Command, response, model string) {
 	}
 }
 
-// handleConfigCommand handles configuration management
-func handleConfigCommand(args []string) error {
+// handleModelsCommand handles showing available models
+func handleModelsCommand(args []string) error {
 	// For now, just print available models
 	llmClient, err := llm.NewOllamaClient()
 	if err != nil {
@@ -319,7 +319,7 @@ COMMANDS:
   ask, a      Ask a question
   suggest, s  Get command suggestions  
   explain, e  Explain a command
-  config, c   Show configuration (available models)
+  models, m   Show available models
   version, v  Show version information
   help, h     Show this help message
 
@@ -340,7 +340,7 @@ EXAMPLES:
   lamacli e --model=qwen2.5-coder "docker compose up -d"
   
   lamacli ask --context=. --include="*.md" "Summarize this project"
-  lamacli config
+  lamacli models
   lamacli version
 
 NOTE: Run 'lamacli' without arguments to start the interactive mode.

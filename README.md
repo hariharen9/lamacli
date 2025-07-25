@@ -1,6 +1,6 @@
 # LamaCLI 🦙✨ <img src="./assets/lamacli%20icon.png" alt="LamaCLI Banner" width="35"/>
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) ![GitHub Stars](https://img.shields.io/github/stars/hariharen9/lamacli?style=social) ![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) ![GitHub Stars](https://img.shields.io/github/stars/hariharen9/lamacli?style=social) ![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)
 
 ## 🚀 Your Local LLM Assistant, Right in Your Terminal!
 
@@ -16,18 +16,31 @@ Engage with your AI assistant in both **interactive mode** and **command-line mo
 
 **Table of Contents**
 
-- [✨ Features](#-features)
-- [⚡️ Get Started](#️-get-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Usage](#usage)
-- [Key Bindings](#key-bindings)
-- [📺 Demo Videos](#-demo-videos)
-- [🖥️ CLI Mode Examples](#️-cli-mode-examples)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
-- [❤️ Support LamaCLI](#️-support-lamacli)
-- [🙏 Credits](#-credits)
+- [LamaCLI 🦙✨ ](#lamacli--)
+  - [🚀 Your Local LLM Assistant, Right in Your Terminal!](#-your-local-llm-assistant-right-in-your-terminal)
+  - [✨ Features](#-features)
+    - [🎯 Dual Operation Modes](#-dual-operation-modes)
+    - [💬 Interactive Chat Features](#-interactive-chat-features)
+    - [🗂️ File Management](#️-file-management)
+    - [🤖 Model Management](#-model-management)
+  - [⚡️ Get Started](#️-get-started)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+      - [📦 Via npm (Recommended)](#-via-npm-recommended)
+      - [🛠️ Via Go](#️-via-go)
+      - [📥 Download Binary](#-download-binary)
+    - [Usage](#usage)
+    - [Key Bindings](#key-bindings)
+  - [📺 Demo Videos](#-demo-videos)
+  - [🖥️ CLI Mode Examples](#️-cli-mode-examples)
+    - [Examples in CLI Mode:](#examples-in-cli-mode)
+    - [Get Command Suggestions](#get-command-suggestions)
+    - [Explain Commands](#explain-commands)
+    - [Other Commands](#other-commands)
+  - [🤝 Contributing](#-contributing)
+  - [📄 License](#-license)
+  - [❤️ Support LamaCLI](#️-support-lamacli)
+  - [🙏 Credits](#-credits)
 
 ---
 
@@ -58,12 +71,6 @@ Engage with your AI assistant in both **interactive mode** and **command-line mo
 *   **Default Model Detection:** Automatically uses your first available model
 *   **Model Information:** View all available models and their status
 
-### 🎨 User Experience
-*   **Beautiful Theming:** Modern Catppuccin color palette
-*   **Intuitive Key Bindings:** Vim-inspired navigation with helpful shortcuts
-*   **Responsive Design:** Adapts to terminal size with smart text wrapping
-*   **Loading Indicators:** Visual feedback during model processing in both modes
-*   **Help System:** Comprehensive in-app help and command documentation
 
 ## ⚡️ Get Started
 
@@ -208,10 +215,10 @@ lamacli explain "find . -name '*.go' -exec grep -l 'func main' {} \;"
 lamacli e --model=qwen2.5-coder "docker compose up -d"
 ```
 
-### Configuration
+### Other Commands
 ```bash
 # Show available models
-lamacli config
+lamacli models
 
 # Show version
 lamacli version
@@ -220,7 +227,7 @@ lamacli version
 lamacli help
 ```
 
-**Note:** All CLI commands support the `--model`, `--context` and `--include` flags for customization.
+**Note:** All CLI commands support the `--model`, `--context`, `--include` and `--theme` flags for customization.
 
 ## 🤝 Contributing
 
