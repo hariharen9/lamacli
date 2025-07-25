@@ -82,7 +82,7 @@ func New(llmClient *llm.OllamaClient, selectedModel string) Model {
 
 	// Initialize markdown renderer with custom styling
 	renderer, _ := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
+		glamour.WithStylePath("dark"),
 		glamour.WithWordWrap(80),
 	)
 
@@ -254,7 +254,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update renderer width
 		if m.renderer != nil {
 			m.renderer, _ = glamour.NewTermRenderer(
-				glamour.WithAutoStyle(),
+				glamour.WithStylePath("dark"),
 				glamour.WithWordWrap(m.viewport.Width-4),
 			)
 		}

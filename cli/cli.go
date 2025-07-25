@@ -34,7 +34,7 @@ type CommandOptions struct {
 
 // Version information
 const (
-	Version = "0.4.0"
+	Version = "1.0.2"
 )
 
 // ProcessCLICommand processes CLI commands with flags and arguments
@@ -124,17 +124,17 @@ func handleLLMCommand(command Command, args []string) error {
 		finalPrompt = fmt.Sprintf("%s\n\nContext:\n%s", prompt, contextContent)
 	}
 
-// Show simple loading indicator that works on all terminals
+	// Show simple loading indicator that works on all terminals
 	fmt.Print("Thinking")
-	
+
 	// Create a done channel to coordinate the loading indicator
 	loadingDone := make(chan bool)
-	
+
 	// Start simple dot-based loading animation
 	go func() {
 		ticker := time.NewTicker(500 * time.Millisecond)
 		defer ticker.Stop()
-		
+
 		for {
 			select {
 			case <-loadingDone:
@@ -144,10 +144,10 @@ func handleLLMCommand(command Command, args []string) error {
 			}
 		}
 	}()
-	
+
 	// Generate response
 	response, err := llmClient.GenerateResponse(model, finalPrompt, systemPrompt)
-	
+
 	// Stop the loading animation
 	loadingDone <- true
 	// Print a newline to finish the loading line
