@@ -1,6 +1,6 @@
 # LamaCLI 🦙✨ <img src="./assets/lamacli%20icon.png" alt="LamaCLI Banner" width="35"/>
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) ![GitHub Stars](https://img.shields.io/github/stars/hariharen9/lamacli?style=social) ![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) ![GitHub Stars](https://img.shields.io/github/stars/hariharen9/lamacli?style=social) ![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)
 
 ## 🚀 Your Local LLM Assistant, Right in Your Terminal!
 
