@@ -1,6 +1,6 @@
 # LamaCLI 🦙✨ <img src="./assets/lamacli%20icon.png" alt="LamaCLI Banner" width="35"/>
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) ![GitHub Stars](https://img.shields.io/github/stars/hariharen9/lamacli?style=social) ![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) ![GitHub Stars](https://img.shields.io/github/stars/hariharen9/lamacli?style=social) ![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)
 
 ## 🚀 Your Local LLM Assistant, Right in Your Terminal!
 
@@ -33,6 +33,7 @@ Engage with your AI assistant in both **interactive mode** and **command-line mo
     - [Key Bindings](#key-bindings)
   - [📺 Demo Videos](#-demo-videos)
   - [🖥️ CLI Mode Examples](#️-cli-mode-examples)
+    - [Output Modes](#output-modes)
     - [Examples in CLI Mode:](#examples-in-cli-mode)
     - [Get Command Suggestions](#get-command-suggestions)
     - [Explain Commands](#explain-commands)
@@ -185,10 +186,21 @@ lamacli
 
 While the interactive mode is the main feature, LamaCLI also supports quick CLI commands for rapid queries:
 
+### Output Modes
+
+LamaCLI supports two output modes when using the CLI commands:
+
+1. **Markdown Rendering (Default)** - Displays a nicely formatted response with proper Markdown rendering after the LLM completes its response. A spinner animation with "Thinking..." text is shown while waiting for the complete response.
+
+2. **Streaming Mode** - Displays the raw LLM response in real-time as it's generated, without Markdown rendering. Enable this mode with the `--stream` flag. The spinner stops after the first chunk of the response appears.
+
 ### Examples in CLI Mode:
 ```bash
-# Basic question
+# Basic question with Markdown rendering (default)
 lamacli ask "How do I list files in Linux?"
+
+# With streaming output (no Markdown rendering)
+lamacli ask --stream "How do I list files in Linux?"
 
 # With model override
 lamacli a --model=qwen2.5-coder:1.5b "Explain async/await in JavaScript"
@@ -227,7 +239,12 @@ lamacli version
 lamacli help
 ```
 
-**Note:** All CLI commands support the `--model`, `--context`, `--include` and `--theme` flags for customization.
+**Note:** All CLI commands support the following flags for customization:
+- `--model`: Override the default model
+- `--context`: Specify a directory for context
+- `--include`: Filter files for context
+- `--theme`: Set a specific theme
+- `--stream`: Enable real-time streaming output (disables Markdown rendering)
 
 ## 🤝 Contributing
 

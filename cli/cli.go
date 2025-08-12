@@ -6,14 +6,39 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
+	"github.com/charmbracelet/bubbles/spinner"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/hariharen9/lamacli/fileops"
 	"github.com/hariharen9/lamacli/llm"
 )
 
 // Command represents a CLI command type.
 type Command string
+
+// spinnerModel wraps the spinner.Model for use with bubbletea
+type spinnerModel struct {
+	spinner spinner.Model
+}
+
+// Init initializes the spinner model
+func (m spinnerModel) Init() tea.Cmd {
+	return m.spinner.Tick
+}
+
+// Update updates the spinner model
+func (m spinnerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.spinner, cmd = m.spinner.Update(msg)
+	return m, cmd
+}
+
+// View renders the spinner
+func (m spinnerModel) View() string {
+	return m.spinner.View()
+}
 
 const (
 	CommandAsk     Command = "ask"
@@ -30,11 +55,12 @@ type CommandOptions struct {
 	Context      string
 	Include      string
 	SystemPrompt string
+	StreamMode   bool
 }
 
 // Version information
 const (
-	Version = "1.0.2"
+	Version = "1.5.0"
 )
 
 // ProcessCLICommand processes CLI commands with flags and arguments
@@ -118,47 +144,90 @@ func handleLLMCommand(command Command, args []string) error {
 	// Prepare system prompt based on command
 	systemPrompt := buildSystemPrompt(command, options.SystemPrompt)
 
+	// Check if streaming mode is enabled (default is false - use Markdown rendering)
+	streamMode := options.StreamMode
+
+	// Create a spinner model
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+
+	// Create a done channel to coordinate the loading indicator
+	loadingDone := make(chan bool)
+
+	// Start the spinner animation in a separate goroutine
+	go func() {
+		// In Markdown mode, we need to print "Thinking..." before starting the spinner
+		if !streamMode {
+			fmt.Print("Thinking... ")
+		}
+
+		p := tea.NewProgram(spinnerModel{s})
+		go func() {
+			<-loadingDone
+			p.Quit()
+		}()
+		p.Run()
+	}()
+
+	// Create a channel for streaming responses
+	responseChan := make(chan string)
+
 	// Combine prompt with context
 	finalPrompt := prompt
 	if contextContent != "" {
 		finalPrompt = fmt.Sprintf("%s\n\nContext:\n%s", prompt, contextContent)
 	}
 
-	// Show simple loading indicator that works on all terminals
-	fmt.Print("Thinking")
+	// Create a history slice for the chat
+	history := []string{finalPrompt}
 
-	// Create a done channel to coordinate the loading indicator
-	loadingDone := make(chan bool)
-
-	// Start simple dot-based loading animation
+	// Start streaming response in a goroutine
 	go func() {
-		ticker := time.NewTicker(500 * time.Millisecond)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-loadingDone:
-				return
-			case <-ticker.C:
-				fmt.Print(".")
-			}
-		}
+		llmClient.GenerateResponseStream(model, systemPrompt, history, responseChan)
 	}()
 
-	// Generate response
-	response, err := llmClient.GenerateResponse(model, finalPrompt, systemPrompt)
+	// Variables to collect the response
+	var fullResponse string
+	firstChunk := true
 
-	// Stop the loading animation
-	loadingDone <- true
-	// Print a newline to finish the loading line
-	fmt.Println()
+	// Process the response based on mode
+	if streamMode {
+		// Stream mode: Print chunks as they arrive
+		for chunk := range responseChan {
+			// Stop the spinner after the first chunk
+			if firstChunk {
+				loadingDone <- true
+				firstChunk = false
+				// Print a newline to finish the loading line
+				fmt.Println()
+			}
 
-	if err != nil {
-		return fmt.Errorf("failed to generate response: %w", err)
+			// Print the chunk directly to stdout
+			fmt.Print(chunk)
+
+			// Collect the full response
+			fullResponse += chunk
+		}
+	} else {
+		// Markdown mode: The "Thinking..." text is already printed alongside the spinner
+		// in the spinner goroutine
+
+		// Collect all chunks silently, then render with Markdown
+		for chunk := range responseChan {
+			// Just collect the response without printing
+			fullResponse += chunk
+		}
+
+		// Stop the spinner after all chunks are collected
+		loadingDone <- true
+
+		// Print a newline after collection is complete
+		fmt.Println()
+
+		// Print the full response with Markdown formatting
+		printFormattedResponse(command, fullResponse, model)
 	}
-
-	// Print response with appropriate formatting
-	printFormattedResponse(command, response, model)
 	return nil
 }
 
@@ -172,6 +241,7 @@ func parseCommandFlags(args []string) (*CommandOptions, string, error) {
 	flags.StringVar(&options.Context, "context", "", "Include directory context")
 	flags.StringVar(&options.Include, "include", "", "File pattern to include in context")
 	flags.StringVar(&options.SystemPrompt, "system", "", "Custom system prompt")
+	flags.BoolVar(&options.StreamMode, "stream", false, "Stream output without Markdown rendering")
 
 	err := flags.Parse(args)
 	if err != nil {
@@ -261,17 +331,45 @@ func buildSystemPrompt(command Command, customPrompt string) string {
 	}
 }
 
-// printFormattedResponse prints the response with appropriate formatting
+// printFormattedResponse prints the response with appropriate formatting and markdown rendering
 func printFormattedResponse(command Command, response, model string) {
+	// Create a glamour renderer for markdown
+	renderer, err := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(100),
+	)
+
+	// Fallback to plain text if renderer creation fails
+	if err != nil {
+		switch command {
+		case CommandSuggest:
+			fmt.Printf("\n🔮 Suggested Command (using %s):\n%s\n\n", model, response)
+		case CommandExplain:
+			fmt.Printf("\n📖 Command Explanation (using %s):\n%s\n\n", model, response)
+		case CommandAsk:
+			fmt.Printf("\n💭 Response (using %s):\n%s\n\n", model, response)
+		default:
+			fmt.Printf("\n%s\n\n", response)
+		}
+		return
+	}
+
+	// Render the response with markdown
+	renderedResponse, err := renderer.Render(response)
+	if err != nil {
+		// Fallback to plain text if rendering fails
+		renderedResponse = response
+	}
+
 	switch command {
 	case CommandSuggest:
-		fmt.Printf("\n🔮 Suggested Command (using %s):\n%s\n\n", model, response)
+		fmt.Printf("\n🔮 Suggested Command (using %s):\n%s\n", model, renderedResponse)
 	case CommandExplain:
-		fmt.Printf("\n📖 Command Explanation (using %s):\n%s\n\n", model, response)
+		fmt.Printf("\n📖 Command Explanation (using %s):\n%s\n", model, renderedResponse)
 	case CommandAsk:
-		fmt.Printf("\n💭 Response (using %s):\n%s\n\n", model, response)
+		fmt.Printf("\n💭 Response (using %s):\n%s\n", model, renderedResponse)
 	default:
-		fmt.Printf("\n%s\n\n", response)
+		fmt.Printf("\n%s\n", renderedResponse)
 	}
 }
 
@@ -328,6 +426,7 @@ OPTIONS:
   --context   Include directory context (e.g., --context=.)
   --include   File pattern for context (e.g., --include=*.md)
   --system    Custom system prompt
+  --stream    Stream output without Markdown rendering
 
 EXAMPLES:
   lamacli ask "How do I list files in Linux?"
