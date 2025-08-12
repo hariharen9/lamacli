@@ -14,37 +14,6 @@ Engage with your AI assistant in both **interactive mode** and **command-line mo
 
 ---
 
-**Table of Contents**
-
-- [LamaCLI 🦙✨ ](#lamacli--)
-  - [🚀 Your Local LLM Assistant, Right in Your Terminal!](#-your-local-llm-assistant-right-in-your-terminal)
-  - [✨ Features](#-features)
-    - [🎯 Dual Operation Modes](#-dual-operation-modes)
-    - [💬 Interactive Chat Features](#-interactive-chat-features)
-    - [🗂️ File Management](#️-file-management)
-    - [🤖 Model Management](#-model-management)
-  - [⚡️ Get Started](#️-get-started)
-    - [Prerequisites](#prerequisites)
-    - [Installation](#installation)
-      - [📦 Via npm (Recommended)](#-via-npm-recommended)
-      - [🛠️ Via Go](#️-via-go)
-      - [📥 Download Binary](#-download-binary)
-    - [Usage](#usage)
-    - [Key Bindings](#key-bindings)
-  - [📺 Demo Videos](#-demo-videos)
-  - [🖥️ CLI Mode Examples](#️-cli-mode-examples)
-    - [Output Modes](#output-modes)
-    - [Examples in CLI Mode:](#examples-in-cli-mode)
-    - [Get Command Suggestions](#get-command-suggestions)
-    - [Explain Commands](#explain-commands)
-    - [Other Commands](#other-commands)
-  - [🤝 Contributing](#-contributing)
-  - [📄 License](#-license)
-  - [❤️ Support LamaCLI](#️-support-lamacli)
-  - [🙏 Credits](#-credits)
-
----
-
 ## ✨ Features
 
 ### 🎯 Dual Operation Modes
